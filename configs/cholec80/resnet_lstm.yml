@@ -1,0 +1,4 @@
+learning_rate: 1e-4
+batch_size: 10
+max_epochs: 30
+sequence_length: 10

@@ -24,8 +24,34 @@ from torchvision import transforms
 import os
 import numpy as np
 
+class CholecDataset(Dataset):
+    """
+    
+    """
+    def __init__(self, file_paths, file_labels, transform=None,
+                 loader=default_loader):
+        self.file_paths = file_paths
+        self.file_labels_phase = file_labels[:,0]
+        self.transform = transform
+        self.loader = loader
+
+    def __getitem__(self, index):
+        img_names = self.file_paths[index]
+        labels_phase = self.file_labels_phase[index]
+        imgs = self.loader(img_names)
+        if self.transform is not None:
+            imgs = self.transform(imgs)
+
+        return imgs, labels_phase
+
+    def __len__(self):
+        return len(self.file_paths)
+
 
 class FramewiseDataset(Dataset):
+    """
+    
+    """
     def __init__(self, dataset, root, label_folder='annotation_folder', video_folder='image_folder', blacklist=[]):
         self.dataset = dataset
         self.blacklist= blacklist
@@ -64,6 +90,103 @@ class FramewiseDataset(Dataset):
                 transforms.ToTensor()
         ])
 
+    def read_labels(self, label_file):
+        with open(label_file,'r') as f:
+            phases = [line.strip().split('\t')[1] for line in f.readlines()]
+            labels = phase2label(phases, phase2label_dicts[self.dataset])
+        return labels
+    
+
+class VideoDataset(Dataset):
+    """
+    NETE 的 dataset 定义
+    里面关于 mask 和 corss-validate 部分目前没有看明白
+    """
+    def __init__(self, dataset, root, sample_rate, video_feature_folder, blacklist=[]):
+        self.dataset = dataset
+        self.sample_rate = sample_rate
+        self.blacklist = blacklist # for cross-validate
+        self.videos = []
+        self.labels = []
+        self.hard_frames = []
+        self.video_names = []
+        if dataset =='cholec80':
+            self.hard_frame_index = 7
+        if dataset == 'm2cai16':
+            self.hard_frame_index = 8 
+
+        video_feature_folder = os.path.join(root, video_feature_folder)
+        label_folder = os.path.join(root, 'annotation_folder')
+        hard_frames_folder = os.path.join(root, 'hard_frames@2020')
+        for v_f in os.listdir(video_feature_folder):
+            if v_f.split('.')[0] in blacklist:
+                continue
+            v_f_abs_path = os.path.join(video_feature_folder, v_f)
+            v_label_file_abs_path = os.path.join(label_folder, v_f.split('.')[0] + '.txt')
+            v_hard_frame_abs_path = os.path.join(hard_frames_folder, v_f.split('.')[0] + '.txt')
+            labels = self.read_labels(v_label_file_abs_path)
+            
+            labels = labels[::sample_rate]
+            videos = np.load(v_f_abs_path)[::sample_rate,]
+            masks = self.read_hard_frames(v_hard_frame_abs_path,  self.hard_frame_index)
+            masks = masks[::sample_rate]
+            assert len(labels) == len(masks)
+
+            self.videos.append(videos)
+            self.labels.append(labels)
+            self.hard_frames.append(masks)
+            self.video_names.append(v_f)
+
+        print('VideoDataset: Load dataset {} with {} videos.'.format(self.dataset, self.__len__()))
+
+
+class TestVideoDataset(Dataset):
+    '''
+    SAHC 的 dataset 的定义
+    读取 video_feature_folder 里面的视频特征，和对应的 labels 
+    按照 sample_rate 采样
+
+    一个视频对应一条数据吧(这样也就方便了后面计算每个视频的正确率)
+    '''
+    def __init__(self, dataset, root, sample_rate, video_feature_folder):
+        self.dataset = dataset
+        self.sample_rate = sample_rate
+        self.videos = []
+        self.labels = []
+
+        video_feature_folder = os.path.join(root, video_feature_folder)
+        label_folder = os.path.join(root, 'annotation_folder')
+
+        num_len = 0
+        ans = 0
+
+        for v_f in os.listdir(video_feature_folder):       
+            v_f_abs_path = os.path.join(video_feature_folder, v_f)
+            v_label_file_abs_path = os.path.join(label_folder, v_f.split('.')[0] + '.txt')
+            labels = self.read_labels(v_label_file_abs_path) 
+            labels = labels[::sample_rate]
+            videos = np.load(v_f_abs_path)[::sample_rate,]
+            num_len += videos.shape[0]
+            self.videos.append(videos)
+            self.labels.append(labels)
+            phase = 1
+            for i in range(len(labels)-1):
+                    if labels[i] == labels[i+1]:
+                        continue
+                    else:
+                        phase += 1
+            ans += 1
+            self.video_names.append(v_f)
+       
+        print('VideoDataset: Load dataset {} with {} videos.'.format(self.dataset, self.__len__()))
+
+    def __len__(self):
+        return len(self.videos)
+  
+    def __getitem__(self, item):
+        video, label, video_name = self.videos[item], self.labels[item], self.video_names[item]
+        return video, label, video_name
+    
     def read_labels(self, label_file):
         with open(label_file,'r') as f:
             phases = [line.strip().split('\t')[1] for line in f.readlines()]
