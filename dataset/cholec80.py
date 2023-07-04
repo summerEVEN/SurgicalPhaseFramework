@@ -17,63 +17,116 @@ FramewiseDataset 里面的数据可以按视频帧的顺序保存起来
 
 """
 
-
 from torch.utils.data import Dataset, DataLoader
 from torchvision.datasets.folder import default_loader
 from torchvision import transforms
 import os
 import numpy as np
 
-class CholecDataset(Dataset):
-    """
+# 定义 阶段 和 label 之间的字典
+phase2label_dicts = {
+    'cholec80':{
+    'Preparation':0,
+    'CalotTriangleDissection':1,
+    'ClippingCutting':2,
+    'GallbladderDissection':3,
+    'GallbladderPackaging':4,
+    'CleaningCoagulation':5,
+    'GallbladderRetraction':6},
     
+    'm2cai16':{
+    'TrocarPlacement':0,
+    'Preparation':1,
+    'CalotTriangleDissection':2,
+    'ClippingCutting':3,
+    'GallbladderDissection':4,
+    'GallbladderPackaging':5,
+    'CleaningCoagulation':6,
+    'GallbladderRetraction':7}
+    }
+
+def phase2label(phases, phase2label_dict):
     """
-    def __init__(self, file_paths, file_labels, transform=None,
-                 loader=default_loader):
-        self.file_paths = file_paths
-        self.file_labels_phase = file_labels[:,0]
-        self.transform = transform
-        self.loader = loader
+    返回一段 phase 对应的 label
+    phases 里面包含多个 phase
+    """
+    labels = [phase2label_dict[phase] if phase in phase2label_dict.keys() else len(phase2label_dict) for phase in phases]
+    return labels
 
-    def __getitem__(self, index):
-        img_names = self.file_paths[index]
-        labels_phase = self.file_labels_phase[index]
-        imgs = self.loader(img_names)
-        if self.transform is not None:
-            imgs = self.transform(imgs)
+def label2phase(labels, phase2label_dict):
+    label2phase_dict = {phase2label_dict[k]:k for k in phase2label_dict.keys()}
+    phases = [label2phase_dict[label] if label in label2phase_dict.keys() else 'HardFrame' for label in labels]
+    return phases
 
-        return imgs, labels_phase
+# class LSTMDataset(Dataset):
+#     """
+#     LSTMDataset：这个命名是因为，使用这个 dataset 的模型使用了 LSTM 结构
+#     但实际上后面的 framedataset 感觉更好一点
+#     """
+#     def __init__(self, file_paths, file_labels, transform=None,
+#                  loader=default_loader):
+#         # self.file_paths = file_paths
+#         # self.file_labels_phase = file_labels[:,0]
+#         # self.transform = transform
+#         # self.loader = loader
 
-    def __len__(self):
-        return len(self.file_paths)
+#     def __getitem__(self, index):
+#         img_names = self.file_paths[index]
+#         labels_phase = self.file_labels_phase[index]
+#         imgs = self.loader(img_names)
+#         if self.transform is not None:
+#             imgs = self.transform(imgs)
+
+#         return imgs, labels_phase
+
+#     def __len__(self):
+#         return len(self.file_paths)
 
 
 class FramewiseDataset(Dataset):
     """
+    __init__ 函数：
+    根据路径读取 数据集的label 和图片信息，以及图片的路径
     
     """
-    def __init__(self, dataset, root, label_folder='annotation_folder', video_folder='image_folder', blacklist=[]):
+    def __init__(self, dataset, root, down_sampling = 25, label_folder='phase_annotations', video_folder='cutMargin', blacklist=[]):
         self.dataset = dataset
         self.blacklist= blacklist
         self.imgs = []
         self.labels = []
+        self.num_each_video = []
 
         label_folder = os.path.join(root, label_folder)
         video_folder = os.path.join(root, video_folder)
-        for v in os.listdir(video_folder):
+        video_folders = os.listdir(video_folder)
+        video_folders.sort()
+        for v in video_folders:
             if v in blacklist:
                 continue
             v_abs_path = os.path.join(video_folder, v)
-            v_label_file_abs_path = os.path.join(label_folder, v + '.txt')
+            v_label_file_abs_path = os.path.join(label_folder, "video" + v + '-phase.txt')
             labels = self.read_labels(v_label_file_abs_path)
-            images = os.listdir(v_abs_path)
+            # images = os.listdir(v_abs_path)
 
-            assert len(labels) == len(images)
-            for image in images:
-                image_index = int(image.split('.')[0])
-                self.imgs.append(os.path.join(v_abs_path, image))
-                self.labels.append(labels[image_index])
-        self.transform = self.get_transform()
+            # assert len(labels) == len(images)
+            # 已经根据这句代码修改了 label 和 cutmargin 的数据hhh
+            # for image in images:
+            #     image_index = int(image.split('.')[0])
+            #     self.imgs.append(os.path.join(v_abs_path, image))
+            #     self.labels.append(labels[image_index])
+            for i in range(len(labels)):
+                if i*down_sampling > len(labels):
+                    self.num_each_video.append(i)
+                    break
+                self.labels.append(labels[i * down_sampling])
+                self.imgs.append(os.path.join(v_abs_path, str(i * down_sampling) + ".jpg")) 
+
+                # print(i)
+                # print(os.path.join(v_abs_path, str(i) + ".jpg"))
+                # print("----------------------")
+                # print()
+
+        self.transform = self.get_transform("opt")
 
         print('FramewiseDataset: Load dataset {} with {} images.'.format(self.dataset, self.__len__()))
 
@@ -84,9 +137,22 @@ class FramewiseDataset(Dataset):
         img, label, img_path = self.transform(default_loader(self.imgs[item])), self.labels[item], self.imgs[item]
         return img, label, img_path
 
-    def get_transform(self):
+    def get_transform(self, opt):
+        """
+        根据传递的 opt 的参数，选择图片的预处理的方法
+        这个预处理打算借鉴一下 TMR 的方法，设计一下预处理相关的一些参数
+
+        不同的模型的图片的size不一样
+        这个的话，后续看看如何统一管理
+        抽取出来，写成一个单独的模块？？？
+        """
+        # return transforms.Compose([
+        #         transforms.Resize((299,299)),
+        #         transforms.ToTensor()
+        # ])
+    
         return transforms.Compose([
-                transforms.Resize((299,299)),
+                transforms.Resize((224,224)),
                 transforms.ToTensor()
         ])
 
@@ -95,7 +161,12 @@ class FramewiseDataset(Dataset):
             phases = [line.strip().split('\t')[1] for line in f.readlines()]
             labels = phase2label(phases, phase2label_dicts[self.dataset])
         return labels
-    
+
+    def get_num_each_video(self):
+        """
+        返回一个list, 包含每个视频的图片数。
+        """
+        return self.num_each_video
 
 class VideoDataset(Dataset):
     """
@@ -160,7 +231,7 @@ class TestVideoDataset(Dataset):
         num_len = 0
         ans = 0
 
-        for v_f in os.listdir(video_feature_folder):       
+        for v_f in os.listdir(video_feature_folder):  
             v_f_abs_path = os.path.join(video_feature_folder, v_f)
             v_label_file_abs_path = os.path.join(label_folder, v_f.split('.')[0] + '.txt')
             labels = self.read_labels(v_label_file_abs_path) 
@@ -192,3 +263,17 @@ class TestVideoDataset(Dataset):
             phases = [line.strip().split('\t')[1] for line in f.readlines()]
             labels = phase2label(phases, phase2label_dicts[self.dataset])
         return labels
+    
+if __name__ == "__main__":
+    current_path = os.getcwd()
+    print("当前程序运行的路径：", current_path)
+    label_folder = 'phase_annotations'
+    video_folder = 'cutMargin'
+
+    path = os.path.join(current_path, "../Dataset/cholec80")
+    if os.path.exists(path):
+        traindataset = FramewiseDataset("cholec80", path, label_folder, video_folder)
+        print(len(traindataset))
+        
+    print()
+    print("!!!")

@@ -1,4 +1,6 @@
-learning_rate: 1e-4
-batch_size: 10
-max_epochs: 30
-sequence_length: 10
+learning_rate: 0.0001
+batch_size: 40
+epoch: 30
+sequence_length: 4
+workers: 4
+id: 类似与一个标识符

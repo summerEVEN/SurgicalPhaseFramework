@@ -20,7 +20,7 @@ import torch.nn.init as init
 class resnet_lstm(torch.nn.Module):
     def __init__(self, opt):
         super(resnet_lstm, self).__init__()
-        resnet = models.resnet50(pretrained=True)
+        resnet = models.resnet50(weights = models.ResNet50_Weights.DEFAULT)
         self.share = torch.nn.Sequential()
         self.share.add_module("conv1", resnet.conv1)
         self.share.add_module("bn1", resnet.bn1)

@@ -22,18 +22,19 @@ def if_use_feat(caption_model):
 def parse_opt():
     parser = argparse.ArgumentParser()
     # Data input settings
-    parser.add_argument('--input_json', type=str, default='data/coco.json',
-                    help='path to the json file containing additional info and vocab')
+
 
     # Model settings
-    parser.add_argument('--caption_model', type=str, default="show_tell",
-                    help='show_tell, show_attend_tell, all_img, fc, att2in, att2in2, att2all2, adaatt, adaattmo, updown, stackatt, denseatt, transformer')
+    parser.add_argument('--model_name', type=str, default="resnet_lstm", help='模型的名称')
+    parser.add_argument('--batch_size', type=int, default=60, help="批大小")
+    parser.add_argument('--sequence_length', type=int, default=4, help="视频片段的长度")
+    parser.add_argument('--learning_rate', type=float, default=1e-4, help="学习率")
+    parser.add_argument('--workers', type=int, default=4, help="^")
 
     # feature manipulation
-    parser.add_argument('--norm_att_feat', type=int, default=0,
-                    help='If normalize attention features')
 
-    add_diversity_opts(parser)
+
+    # add_diversity_opts(parser)
 
     """
     前面的部分，按照模型的需要，设计参数的名称然后添加进来
