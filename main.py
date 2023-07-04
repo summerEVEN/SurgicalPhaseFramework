@@ -19,7 +19,7 @@ from utils import *
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--action', default='train', help='需要执行的操作: train, test, ectract')
+parser.add_argument('--action', default='train', help='需要执行的操作: train, test, extract')
 parser.add_argument('--dataset', default="cholec80", help='选择的数据集')
 parser.add_argument('--sample_rate', default=2, type=int, help='图片的采样率， fps原始为25')
 # parser.add_argument('--predictor_model', default='resnet_lstm', help='特征提取的模型')
@@ -29,8 +29,8 @@ parser.add_argument('--device', type=str, default="cuda")
 
 args, args2 = parser.parse_known_args()
 
-# print(args)
-# print(args2)
+print(args)
+print(args2)
 
 # 加载其他模型的参数（比如配置文件等等）
 opt = opts.parse_opt()
@@ -98,12 +98,39 @@ def run():
             import script.resnet_lstm as train
             train.train(opt, model, train_dataset, test_dataset, device)
             # (opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/resnet_lstm")
+        if model_name == "TMR":
+            print(" TMR 开始加载 ")
+            import model.refinement.TMR as TMR_model
+            model = TMR_model.resnet_lstm(opt)
+            print(" TMR 加载成功 ！！！！")
+
+            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
+
+            import script.TMR as train
+            train.train(opt, model, train_dataset, test_dataset, device)
+            # (opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/resnet_lstm")
 
     if action == 'eval':
         print("TODO")
 
     if args.action == 'extract':
-        print("TODO")      
+        if model_name == "resnet_lstm":
+            print(" resnet_lstm 开始加载 ")
+            import model.predictor.resnet_lstm as resnet_lstm_model
+            model = resnet_lstm_model.resnet_lstm(opt)
+            print(" resnet_lstm 加载成功 ！！！！")
+
+            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
+
+            import script.resnet_lstm as train
+            train.extract(opt, model, train_dataset, test_dataset, device)
+            # def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature/resnet_lstm")    
 
 
 if __name__ == '__main__':  

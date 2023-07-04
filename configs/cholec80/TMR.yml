@@ -1,0 +1,8 @@
+learning_rate: 0.0001
+batch_size: 40
+epoch: 30
+sequence_length: 4
+workers: 4
+model_path: 
+# 
+id: 类似与一个标识符

@@ -30,6 +30,7 @@ def parse_opt():
     parser.add_argument('--sequence_length', type=int, default=4, help="视频片段的长度")
     parser.add_argument('--learning_rate', type=float, default=1e-4, help="学习率")
     parser.add_argument('--workers', type=int, default=4, help="^")
+    parser.add_argument('--model_path', type=str, help="模型的路径")
 
     # feature manipulation
 
@@ -44,7 +45,7 @@ def parse_opt():
     
     """
     # config
-    parser.add_argument('--cfg', type=str, default=None,
+    parser.add_argument('--cfg', type=str, default="",
                     help='configuration; similar to what is used in detectron')
     parser.add_argument(
         '--set_cfgs', dest='set_cfgs',
@@ -60,6 +61,7 @@ def parse_opt():
     # 4) in the end, parse command line argument and overwrite args
 
     # step 1: read cfg_fn
+    # args = parser.parse_known_args()
     args = parser.parse_args()
     if args.cfg is not None or args.set_cfgs is not None:
         from .config import CfgNode
@@ -73,7 +75,8 @@ def parse_opt():
             if not hasattr(args, k):
                 print('Warning: key %s not in args' %k)
             setattr(args, k, v)
-        args = parser.parse_args(namespace=args)
+        # args = parser.parse_args(namespace=args)
+        args = parser.parse_known_args(namespace=args)
 
     # 读取完 configs 文件后，需要保证参数的正确性（排除掉不符合模型结构的数据）
     # Check if args are valid

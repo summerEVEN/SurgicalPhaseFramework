@@ -17,6 +17,7 @@ from torch.utils.data import Sampler
 
 import copy
 import time
+import pickle
 
 __all__ = ['train', 'test', "extract"]
 
@@ -207,11 +208,79 @@ def test(opt, model, test_dataset, device):
     return acc
 
 
-def extract(opt, model, dataset, devices):
+def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature/resnet_lstm"):
     """
     使用 resnet_lstm 网络提取视频特征
     """
+    model.load_state_dict(torch.load(opt.model_path), strict=False)
+    model.to(device)
+    model.eval()
+    train_loader = dataset_propre(opt, train_dataset)
+    test_loader = dataset_propre(opt, test_dataset)
 
+    with torch.no_grad():
+        for data in train_loader:
+            inputs, labels_phase = data[0].to(device), data[1].to(device)
+
+            inputs = inputs.view(-1, opt.sequence_length, 3, 224, 224)
+            outputs_feature = model.forward(inputs)
+
+            for j in range(len(outputs_feature)):
+                save_feature = outputs_feature.data.cpu()[j].numpy()
+                save_feature = save_feature.reshape(1, 512)
+                g_LFB_train = np.concatenate((g_LFB_train, save_feature),axis=0)
+
+            print("train feature length:",len(g_LFB_train))
+
+        for data in test_loader:
+            inputs, labels_phase = data[0].to(device), data[1].to(device)
+
+            inputs = inputs.view(-1, opt.sequence_length, 3, 224, 224)
+            outputs_feature = model.forward(inputs)
+
+            for j in range(len(outputs_feature)):
+                save_feature = outputs_feature.data.cpu()[j].numpy()
+                save_feature = save_feature.reshape(1, 512)
+                g_LFB_val = np.concatenate((g_LFB_val, save_feature), axis=0)
+
+            print("val feature length:",len(g_LFB_val))
+
+        print("finish!")
+        g_LFB_train = np.array(g_LFB_train)
+        g_LFB_val = np.array(g_LFB_val)
+
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        with open(os.path.join(save_dir, "./LFB/g_LFB_train_st.pkl"), 'wb') as f:
+            pickle.dump(g_LFB_train, f)
+
+        with open("./LFB/g_LFB_val_st.pkl", 'wb') as f:
+            pickle.dump(g_LFB_val, f)
+
+
+def get_long_feature(opt, start_index_list, dict_start_idx_LFB, lfb):
+    """
+    这个函数可能不需要出现在这里面
+    """
+    long_feature = []
+    for j in range(len(start_index_list)):
+        long_feature_each = []
+        
+        # 上一个存在feature的index
+        last_LFB_index_no_empty = dict_start_idx_LFB[int(start_index_list[j])]
+        
+        for k in range(opt.LFB_length):
+            LFB_index = (start_index_list[j] - k - 1)
+            if int(LFB_index) in dict_start_idx_LFB:                
+                LFB_index = dict_start_idx_LFB[int(LFB_index)]
+                long_feature_each.append(lfb[LFB_index])
+                last_LFB_index_no_empty = LFB_index
+            else:
+                long_feature_each.append(lfb[last_LFB_index_no_empty])
+            
+        long_feature.append(long_feature_each)
+    return long_feature
 
 
 if __name__ == "__main__":
