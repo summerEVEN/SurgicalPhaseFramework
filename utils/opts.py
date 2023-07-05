@@ -32,6 +32,12 @@ def parse_opt():
     parser.add_argument('--workers', type=int, default=4, help="^")
     parser.add_argument('--model_path', type=str, help="模型的路径")
 
+    # TMR
+    parser.add_argument('--is_time_conv', type=bool, default=False, help="是否使用时间卷积")
+    parser.add_argument('--train_feature_path', type=str, default=None, help="训练集的特征")
+    parser.add_argument('--test_faeture_path', type=str, default=None, help="测试集的特征文件")
+    parser.add_argument('--LFB_length', type=int, default=20, help="使用memory bank时候的")
+
     # feature manipulation
 
 
@@ -61,8 +67,9 @@ def parse_opt():
     # 4) in the end, parse command line argument and overwrite args
 
     # step 1: read cfg_fn
-    # args = parser.parse_known_args()
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
+    print("-------------")
+    # args = parser.parse_args()
     if args.cfg is not None or args.set_cfgs is not None:
         from .config import CfgNode
         if args.cfg is not None:
@@ -76,7 +83,7 @@ def parse_opt():
                 print('Warning: key %s not in args' %k)
             setattr(args, k, v)
         # args = parser.parse_args(namespace=args)
-        args = parser.parse_known_args(namespace=args)
+        args, _ = parser.parse_known_args(namespace=args)
 
     # 读取完 configs 文件后，需要保证参数的正确性（排除掉不符合模型结构的数据）
     # Check if args are valid

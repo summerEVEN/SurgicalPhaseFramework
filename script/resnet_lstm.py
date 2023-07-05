@@ -14,6 +14,7 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import Sampler
+from script.data_propre import dataset_propre
 
 import copy
 import time
@@ -21,58 +22,6 @@ import pickle
 
 __all__ = ['train', 'test', "extract"]
 
-def get_useful_start_idx(sequence_length, list_each_length):
-    """
-    获取每个视频起始的图片id
-    通过这个id, 可以快速在 dataset 里面，找到当前视频的每个视频片段的起始图片id
-    """
-    count = 0
-    idx = []
-    for i in range(len(list_each_length)):
-        for j in range(count, count + (list_each_length[i] + 1 - sequence_length)):
-            idx.append(j)
-        count += list_each_length[i]
-    return idx
-
-class SeqSampler(Sampler):
-    def __init__(self, data_source, idx):
-        super().__init__(data_source)
-        self.data_source = data_source
-        self.idx = idx
-
-    def __iter__(self):
-        return iter(self.idx)
-
-    def __len__(self):
-        return len(self.idx)
-    
-def dataset_propre(opt, dataset, shuffle = False):
-    sequence_length = opt.sequence_length
-
-    # 获取测试集每个视频包含的图片数的list
-    dataset_num_each = []
-    dataset_num_each = dataset.get_num_each_video()
-    dataset_useful_start_idx = get_useful_start_idx(sequence_length, dataset_num_each)
-    # 训练集中有效的视频片段数量
-    dataset_slice_num = len(dataset_useful_start_idx)
-
-    if shuffle:
-        np.random.shuffle(dataset_useful_start_idx)
-
-    dataset_idx = []
-    for i in range(dataset_slice_num):
-        for j in range(sequence_length):
-            dataset_idx.append(dataset_useful_start_idx[i] + j)
-
-    data_loader = DataLoader(
-        dataset,
-        batch_size=opt.batch_size,
-        sampler=SeqSampler(dataset, dataset_idx),
-        num_workers=opt.workers,
-        pin_memory=False
-    )
-
-    return data_loader
 
 def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/resnet_lstm", debug=True):
     """
@@ -143,7 +92,10 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
 
             inputs = inputs.view(-1, sequence_length, 3, 224, 224)
             outputs_phase = model.forward(inputs)
-            outputs_phase = outputs_phase[sequence_length - 1::sequence_length]
+            # outputs_phase = outputs_phase[sequence_length - 1::sequence_length]
+
+            print(outputs_phase.shape)
+            print(labels_phase.shape)
 
             _, preds_phase = torch.max(outputs_phase.data, 1)
             loss_phase = criterion_phase(outputs_phase, labels_phase)
@@ -197,7 +149,7 @@ def test(opt, model, test_dataset, device):
             labels_phase = labels_phase[(sequence_length - 1)::sequence_length]
             inputs = inputs.view(-1, sequence_length, 3, 224, 224)
             outputs_phase = model.forward(inputs)
-            outputs_phase = outputs_phase[sequence_length - 1::sequence_length]
+            # outputs_phase = outputs_phase[sequence_length - 1::sequence_length]
 
             _, preds_phase = torch.max(outputs_phase.data, 1)
 
@@ -208,15 +160,25 @@ def test(opt, model, test_dataset, device):
     return acc
 
 
-def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature/resnet_lstm"):
+def extract(opt, train_dataset, test_dataset, device, save_dir = "./result/feature/resnet_lstm"):
     """
     使用 resnet_lstm 网络提取视频特征
     """
+    import model.predictor.resnet_lstm as resnet_lstm
+    model = resnet_lstm.resnet_lstm_feature(opt)
+
     model.load_state_dict(torch.load(opt.model_path), strict=False)
     model.to(device)
     model.eval()
+
+    print("-----------开始运行------------")
+
     train_loader = dataset_propre(opt, train_dataset)
     test_loader = dataset_propre(opt, test_dataset)
+
+    # Long Term Feature bank
+    g_LFB_train = np.zeros(shape=(0, 512))
+    g_LFB_val = np.zeros(shape=(0, 512))
 
     with torch.no_grad():
         for data in train_loader:
@@ -227,6 +189,7 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
 
             for j in range(len(outputs_feature)):
                 save_feature = outputs_feature.data.cpu()[j].numpy()
+                # print(save_feature)
                 save_feature = save_feature.reshape(1, 512)
                 g_LFB_train = np.concatenate((g_LFB_train, save_feature),axis=0)
 
@@ -252,35 +215,11 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        with open(os.path.join(save_dir, "./LFB/g_LFB_train_st.pkl"), 'wb') as f:
+        with open(os.path.join(save_dir, "g_LFB_train_st.pkl"), 'wb') as f:
             pickle.dump(g_LFB_train, f)
 
-        with open("./LFB/g_LFB_val_st.pkl", 'wb') as f:
+        with open(os.path.join(save_dir, "g_LFB_test_st.pkl"), 'wb') as f:
             pickle.dump(g_LFB_val, f)
-
-
-def get_long_feature(opt, start_index_list, dict_start_idx_LFB, lfb):
-    """
-    这个函数可能不需要出现在这里面
-    """
-    long_feature = []
-    for j in range(len(start_index_list)):
-        long_feature_each = []
-        
-        # 上一个存在feature的index
-        last_LFB_index_no_empty = dict_start_idx_LFB[int(start_index_list[j])]
-        
-        for k in range(opt.LFB_length):
-            LFB_index = (start_index_list[j] - k - 1)
-            if int(LFB_index) in dict_start_idx_LFB:                
-                LFB_index = dict_start_idx_LFB[int(LFB_index)]
-                long_feature_each.append(lfb[LFB_index])
-                last_LFB_index_no_empty = LFB_index
-            else:
-                long_feature_each.append(lfb[last_LFB_index_no_empty])
-            
-        long_feature.append(long_feature_each)
-    return long_feature
 
 
 if __name__ == "__main__":

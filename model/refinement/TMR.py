@@ -45,12 +45,15 @@ class resnet_lstm(torch.nn.Module):
 
         if self.is_time_conv:
             Lt = self.time_conv(long_feature)
-
-        y_1 = self.nl_block(y, Lt)
+            y_1 = self.nl_block(y, Lt)
+        else: 
+            y_1 = self.nl_block(y, long_feature)
         y = torch.cat([y, y_1], dim=1)
         y = self.dropout(self.fc_h_c(y))
         y = F.relu(y)
         y = self.fc_c(y)
+
+        # y = y[self.sequence_length - 1::self.sequence_length]
         return y
     
 

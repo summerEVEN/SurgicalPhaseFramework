@@ -99,10 +99,6 @@ def run():
             train.train(opt, model, train_dataset, test_dataset, device)
             # (opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/resnet_lstm")
         if model_name == "TMR":
-            print(" TMR 开始加载 ")
-            import model.refinement.TMR as TMR_model
-            model = TMR_model.resnet_lstm(opt)
-            print(" TMR 加载成功 ！！！！")
 
             train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
             train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
@@ -110,7 +106,7 @@ def run():
             test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
 
             import script.TMR as train
-            train.train(opt, model, train_dataset, test_dataset, device)
+            train.train(opt, train_dataset, test_dataset, device)
             # (opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/resnet_lstm")
 
     if action == 'eval':
@@ -118,18 +114,13 @@ def run():
 
     if args.action == 'extract':
         if model_name == "resnet_lstm":
-            print(" resnet_lstm 开始加载 ")
-            import model.predictor.resnet_lstm as resnet_lstm_model
-            model = resnet_lstm_model.resnet_lstm(opt)
-            print(" resnet_lstm 加载成功 ！！！！")
-
             train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
             train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
             test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
             test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
 
-            import script.resnet_lstm as train
-            train.extract(opt, model, train_dataset, test_dataset, device)
+            import script.resnet_lstm as model
+            model.extract(opt, train_dataset, test_dataset, device)
             # def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature/resnet_lstm")    
 
 

@@ -135,7 +135,7 @@ class FramewiseDataset(Dataset):
 
     def __getitem__(self, item):
         img, label, img_path = self.transform(default_loader(self.imgs[item])), self.labels[item], self.imgs[item]
-        return img, label, img_path
+        return img, label, item, img_path
 
     def get_transform(self, opt):
         """
