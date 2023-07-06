@@ -8,4 +8,10 @@
 
 .pth
 
-.pyc
+*.pyc
+
+/*/__pycache__
+
+*.cpython-39.pyc
+
+*.py[cod]

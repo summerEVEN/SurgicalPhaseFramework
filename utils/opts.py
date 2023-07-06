@@ -25,7 +25,8 @@ def parse_opt():
 
 
     # Model settings
-    parser.add_argument('--model_name', type=str, default="resnet_lstm", help='模型的名称')
+    parser.add_argument('--model_name', type=str, default=None, help='模型的名称')
+
     parser.add_argument('--batch_size', type=int, default=60, help="批大小")
     parser.add_argument('--sequence_length', type=int, default=4, help="视频片段的长度")
     parser.add_argument('--learning_rate', type=float, default=1e-4, help="学习率")

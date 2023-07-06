@@ -1,0 +1,25 @@
+out_features: 7
+num_workers: 3
+batch_size: 1
+mstcn_causal_conv: True
+learning_rate: 1e-3
+min_epochs: 12
+max_epochs: 25
+mstcn_layers: 8
+mstcn_f_maps: 32
+mstcn_f_dim: 2048
+mstcn_stages: 2
+
+sequence_length: 30
+
+# 为了防止我忘记这个网络是干什么的，在这里简单记录一下
+# 它是使用 transformer，同时利用了 时间 和 空间 信息
+# 所以需要给出 空间信息（resnet50 的特征）的 path
+# 还要给出 空间信息(TCN) 的模型路径, 这里的空间信息不是提前生成的
+
+# You can refer to https://github.com/YuemingJin/TMRNet for data pre-processing.
+
+# run train_embedding.py to train ResNet50
+# run generate_LFB.py to generate spatial embeddings
+# run tecno.py to train TCN
+# run trans_SV.py to train Transformer

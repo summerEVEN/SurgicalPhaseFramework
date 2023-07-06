@@ -109,7 +109,7 @@ class FramewiseDataset(Dataset):
             # images = os.listdir(v_abs_path)
 
             # assert len(labels) == len(images)
-            # 已经根据这句代码修改了 label 和 cutmargin 的数据hhh
+            
             # for image in images:
             #     image_index = int(image.split('.')[0])
             #     self.imgs.append(os.path.join(v_abs_path, image))
