@@ -6,6 +6,11 @@
 这里牵扯到一个 batch_size 和 length 的关系（提前验证可以及时修改参数）
 
 """
+
+"""
+关于 tqdm 手动更新进度条存在一点点的小误差，由于视频的 sequence_length 引起的，暂时不去管吧hhh
+
+"""
 import os
 import utils.labels
 import numpy as np
@@ -19,6 +24,7 @@ from script.data_propre import dataset_propre
 import copy
 import time
 import pickle
+from tqdm import tqdm
 
 __all__ = ['train', 'test', "extract"]
 
@@ -52,7 +58,7 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
     # )
 
     ######################## 训练集的数据id处理完成
-    train_loader = dataset_propre(opt, train_dataset, True)
+
     model.to(device)
 
     if not os.path.exists(save_dir):
@@ -76,44 +82,48 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
 
     epochs = opt.epoch
     for epoch in range(epochs):
+        with tqdm(total=len(train_dataset), desc=f"Epoch {epoch+1}", unit="batch") as progress_bar:
+            train_loader = dataset_propre(opt, train_dataset, True)
+            model.train()
+            train_loss_phase = 0.0
+            train_corrects_phase = 0
+            total = 0
+            batch_progress = 0.0
+            running_loss_phase = 0.0
+            train_start_time = time.time()
 
-        model.train()
-        train_loss_phase = 0.0
-        train_corrects_phase = 0
-        total = 0
-        batch_progress = 0.0
-        running_loss_phase = 0.0
-        train_start_time = time.time()
+            for i, data in enumerate(train_loader):
+                inputs, labels_phase = data[0].to(device), data[1].to(device)
 
-        for i, data in enumerate(train_loader):
-            inputs, labels_phase = data[0].to(device), data[1].to(device)
+                labels_phase = labels_phase[(sequence_length - 1)::sequence_length]
 
-            labels_phase = labels_phase[(sequence_length - 1)::sequence_length]
+                inputs = inputs.view(-1, sequence_length, 3, 224, 224)
+                outputs_phase = model.forward(inputs)
+                # outputs_phase = outputs_phase[sequence_length - 1::sequence_length]
 
-            inputs = inputs.view(-1, sequence_length, 3, 224, 224)
-            outputs_phase = model.forward(inputs)
-            # outputs_phase = outputs_phase[sequence_length - 1::sequence_length]
+                # print(outputs_phase.shape)
+                # print(labels_phase.shape)
 
-            print(outputs_phase.shape)
-            print(labels_phase.shape)
+                _, preds_phase = torch.max(outputs_phase.data, 1)
+                loss_phase = criterion_phase(outputs_phase, labels_phase)
 
-            _, preds_phase = torch.max(outputs_phase.data, 1)
-            loss_phase = criterion_phase(outputs_phase, labels_phase)
+                loss = loss_phase
+                loss.backward()
+                optimizer.step()
 
-            loss = loss_phase
-            loss.backward()
-            optimizer.step()
+                running_loss_phase += loss_phase.data.item()
+                train_loss_phase += loss_phase.data.item()
 
-            running_loss_phase += loss_phase.data.item()
-            train_loss_phase += loss_phase.data.item()
+                batch_corrects_phase = torch.sum(preds_phase == labels_phase.data)
+                train_corrects_phase += batch_corrects_phase
 
-            batch_corrects_phase = torch.sum(preds_phase == labels_phase.data)
-            train_corrects_phase += batch_corrects_phase
+                # print(type(labels_phase.data))
+                # print(len(labels_phase.data))
+                total += len(labels_phase.data)
+                # ------------- len(这里可能有问题)
 
-            # print(type(labels_phase.data))
-            # print(len(labels_phase.data))
-            total += len(labels_phase.data)
-            # ------------- len(这里可能有问题)
+                progress_bar.update(len(labels_phase.data))
+                # progress_bar.set_postfix({'Loss': loss_phase.data.item()})
 
         epoch_acc = train_corrects_phase / total
         epoch_loss = train_loss_phase / total
@@ -142,30 +152,35 @@ def test(opt, model, test_dataset, device):
     test_loader = dataset_propre(opt, test_dataset)
     
     with torch.no_grad():
+
         correct = 0
         total = 0
-        for data in test_loader:
-            inputs, labels_phase = data[0].to(device), data[1].to(device)
-            labels_phase = labels_phase[(sequence_length - 1)::sequence_length]
-            inputs = inputs.view(-1, sequence_length, 3, 224, 224)
-            outputs_phase = model.forward(inputs)
-            # outputs_phase = outputs_phase[sequence_length - 1::sequence_length]
+        # process_bar = tqdm(total=len(test_dataset), desc=f"test_progress", unit="batch")
+        with tqdm(total=len(test_dataset), desc="test", unit="batch") as progress_bar:
+            for data in test_loader:
+                inputs, labels_phase = data[0].to(device), data[1].to(device)
+                labels_phase = labels_phase[(sequence_length - 1)::sequence_length]
+                inputs = inputs.view(-1, sequence_length, 3, 224, 224)
+                outputs_phase = model.forward(inputs)
+                # outputs_phase = outputs_phase[sequence_length - 1::sequence_length]
 
-            _, preds_phase = torch.max(outputs_phase.data, 1)
+                _, preds_phase = torch.max(outputs_phase.data, 1)
 
-            correct += torch.sum(preds_phase == labels_phase.data)
-            total +=  len(labels_phase.data)
-        print('Test: Acc {}'.format(correct / total))
+                correct += torch.sum(preds_phase == labels_phase.data)
+                total +=  len(labels_phase.data)
+
+                progress_bar.update(len(labels_phase.data))
+    print('Test: Acc {}'.format(correct / total))
     acc = correct / total
     return acc
 
 
-def extract(opt, train_dataset, test_dataset, device, save_dir = "./result/feature/resnet_lstm"):
+def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature/resnet_lstm"):
     """
     使用 resnet_lstm 网络提取视频特征
     """
-    import model.predictor.resnet_lstm as resnet_lstm
-    model = resnet_lstm.resnet_lstm_feature(opt)
+    # import model.predictor.resnet_lstm as resnet_lstm
+    # model = resnet_lstm.resnet_lstm_feature(opt)
 
     model.load_state_dict(torch.load(opt.model_path), strict=False)
     model.to(device)
@@ -181,45 +196,53 @@ def extract(opt, train_dataset, test_dataset, device, save_dir = "./result/featu
     g_LFB_val = np.zeros(shape=(0, 512))
 
     with torch.no_grad():
-        for data in train_loader:
-            inputs, labels_phase = data[0].to(device), data[1].to(device)
+        with tqdm(total=len(train_dataset), desc="train", unit="batch") as progress_bar:
+            for data in train_loader:
+                inputs, labels_phase = data[0].to(device), data[1].to(device)
 
-            inputs = inputs.view(-1, opt.sequence_length, 3, 224, 224)
-            outputs_feature = model.forward(inputs)
+                inputs = inputs.view(-1, opt.sequence_length, 3, 224, 224)
+                outputs_feature = model.forward(inputs)
 
-            for j in range(len(outputs_feature)):
-                save_feature = outputs_feature.data.cpu()[j].numpy()
-                # print(save_feature)
-                save_feature = save_feature.reshape(1, 512)
-                g_LFB_train = np.concatenate((g_LFB_train, save_feature),axis=0)
+                for j in range(len(outputs_feature)):
+                    save_feature = outputs_feature.data.cpu()[j].numpy()
+                    # print(save_feature)
+                    # 这里reshape的 512 和模型里面输出的大小是保持一致的
+                    # 其他模型可能不一样，这里可以考虑之后，在config里面添加对应的参数，只写一个 extract函数hhh
+                    save_feature = save_feature.reshape(1, 512)
+                    g_LFB_train = np.concatenate((g_LFB_train, save_feature),axis=0)
+                progress_bar.update(len(outputs_feature))
+                # print("train feature length:",len(g_LFB_train))
+            progress_bar.close()
+            
 
-            print("train feature length:",len(g_LFB_train))
+        with tqdm(total=len(test_dataset), desc="test", unit="batch") as progress_bar:
+            for data in test_loader:
+                inputs, labels_phase = data[0].to(device), data[1].to(device)
 
-        for data in test_loader:
-            inputs, labels_phase = data[0].to(device), data[1].to(device)
+                inputs = inputs.view(-1, opt.sequence_length, 3, 224, 224)
+                outputs_feature = model.forward(inputs)
 
-            inputs = inputs.view(-1, opt.sequence_length, 3, 224, 224)
-            outputs_feature = model.forward(inputs)
+                for j in range(len(outputs_feature)):
+                    save_feature = outputs_feature.data.cpu()[j].numpy()
+                    save_feature = save_feature.reshape(1, 512)
+                    g_LFB_val = np.concatenate((g_LFB_val, save_feature), axis=0)
 
-            for j in range(len(outputs_feature)):
-                save_feature = outputs_feature.data.cpu()[j].numpy()
-                save_feature = save_feature.reshape(1, 512)
-                g_LFB_val = np.concatenate((g_LFB_val, save_feature), axis=0)
+                progress_bar.update(len(outputs_feature))
+                # print("val feature length:",len(g_LFB_val))
+            progress_bar.close()
 
-            print("val feature length:",len(g_LFB_val))
+    print("finish!")
+    g_LFB_train = np.array(g_LFB_train)
+    g_LFB_val = np.array(g_LFB_val)
 
-        print("finish!")
-        g_LFB_train = np.array(g_LFB_train)
-        g_LFB_val = np.array(g_LFB_val)
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
 
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
+    with open(os.path.join(save_dir, "g_LFB_train_st.pkl"), 'wb') as f:
+        pickle.dump(g_LFB_train, f)
 
-        with open(os.path.join(save_dir, "g_LFB_train_st.pkl"), 'wb') as f:
-            pickle.dump(g_LFB_train, f)
-
-        with open(os.path.join(save_dir, "g_LFB_test_st.pkl"), 'wb') as f:
-            pickle.dump(g_LFB_val, f)
+    with open(os.path.join(save_dir, "g_LFB_test_st.pkl"), 'wb') as f:
+        pickle.dump(g_LFB_val, f)
 
 
 if __name__ == "__main__":

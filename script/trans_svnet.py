@@ -41,14 +41,11 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "/result/m
 
     # 加载resnet50生成的空间特征
     # 训练集和测试集分别加载
-    with open(opt.train_, 'rb') as f:
+    with open(opt.train_feature_path, 'rb') as f:
         g_LFB_train = pickle.load(f)
 
-    with open("./LFB/g_LFB50_val.pkl", 'rb') as f:
+    with open(opt.test_feature_path, 'rb') as f:
         g_LFB_val = pickle.load(f)
-
-    with open("./LFB/g_LFB50_test.pkl", 'rb') as f:
-        g_LFB_test = pickle.load(f)
 
     print("load completed")
 

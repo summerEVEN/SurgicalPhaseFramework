@@ -23,7 +23,9 @@ from torchvision import transforms
 import os
 import numpy as np
 
-# 定义 阶段 和 label 之间的字典
+# 定义 数据集的阶段 和 label 之间的字典
+# 包含多个数据集的转换字典
+# 实际上这个
 phase2label_dicts = {
     'cholec80':{
     'Preparation':0,
@@ -46,42 +48,29 @@ phase2label_dicts = {
     }
 
 def phase2label(phases, phase2label_dict):
-    """
-    返回一段 phase 对应的 label
-    phases 里面包含多个 phase
+    """ 返回一段 phase 对应的 label；phases 里面包含多个 phase
+    Args：
+        phases：一段阶段的数据
+        phase2label_dict：转换的字典
+    
+    Returns：
+        labels：一段标签数据
     """
     labels = [phase2label_dict[phase] if phase in phase2label_dict.keys() else len(phase2label_dict) for phase in phases]
     return labels
 
 def label2phase(labels, phase2label_dict):
+    """ 根据 label，返回对应的 phase 字段
+    Args：
+        labels：一段标签数据
+        phase2label_dict：转换的字典
+    
+    Returns：
+        phases：一段数据
+    """
     label2phase_dict = {phase2label_dict[k]:k for k in phase2label_dict.keys()}
     phases = [label2phase_dict[label] if label in label2phase_dict.keys() else 'HardFrame' for label in labels]
     return phases
-
-# class LSTMDataset(Dataset):
-#     """
-#     LSTMDataset：这个命名是因为，使用这个 dataset 的模型使用了 LSTM 结构
-#     但实际上后面的 framedataset 感觉更好一点
-#     """
-#     def __init__(self, file_paths, file_labels, transform=None,
-#                  loader=default_loader):
-#         # self.file_paths = file_paths
-#         # self.file_labels_phase = file_labels[:,0]
-#         # self.transform = transform
-#         # self.loader = loader
-
-#     def __getitem__(self, index):
-#         img_names = self.file_paths[index]
-#         labels_phase = self.file_labels_phase[index]
-#         imgs = self.loader(img_names)
-#         if self.transform is not None:
-#             imgs = self.transform(imgs)
-
-#         return imgs, labels_phase
-
-#     def __len__(self):
-#         return len(self.file_paths)
-
 
 class FramewiseDataset(Dataset):
     """
@@ -90,16 +79,37 @@ class FramewiseDataset(Dataset):
     
     """
     def __init__(self, dataset, root, down_sampling = 25, label_folder='phase_annotations', video_folder='cutMargin', blacklist=[]):
+        """ 逐帧的数据集 的初始化方法
+        实现功能：
+            根据文件夹和路径，按照采样率，得到视频的数据集
+
+        Args：
+            dataset：数据集的名称（cholec80，m2cai16等）
+            root：数据集的根目录
+            down_sampling：图片的采样率（默认值25）
+            label_folder：标签数据的文件夹名 （root/phase_annotations/video01-phase.txt)
+            video_folder：视频图片数据的文件夹名 (root/cutMargin/1/1.png)
+            blacklist：读取数据集的时候，跳过 balcklist 里面的文件夹
+
+        Returns：
+            无
+        
+        """
         self.dataset = dataset
         self.blacklist= blacklist
         self.imgs = []
         self.labels = []
         self.num_each_video = []
+        # self.imgs： 图片路径集合
+        # self.labels： 图片标签集合
+        # self.num_each_video： 每个视频包含的图片的数量 （方便后期每个视频的可视化操作）
 
         label_folder = os.path.join(root, label_folder)
         video_folder = os.path.join(root, video_folder)
         video_folders = os.listdir(video_folder)
         video_folders.sort()
+        # 排个序（忘记是什么动机了hhh，就按照视频的名称排个序）
+
         for v in video_folders:
             if v in blacklist:
                 continue
@@ -115,7 +125,7 @@ class FramewiseDataset(Dataset):
             #     self.imgs.append(os.path.join(v_abs_path, image))
             #     self.labels.append(labels[image_index])
             for i in range(len(labels)):
-                if i*down_sampling > len(labels):
+                if i * down_sampling > len(labels):
                     self.num_each_video.append(i)
                     break
                 self.labels.append(labels[i * down_sampling])
@@ -131,18 +141,32 @@ class FramewiseDataset(Dataset):
         print('FramewiseDataset: Load dataset {} with {} images.'.format(self.dataset, self.__len__()))
 
     def __len__(self):
+        """
+        返回数据集的大小（图片数）
+        """
         return len(self.imgs)
 
-    def __getitem__(self, item):
-        img, label, img_path = self.transform(default_loader(self.imgs[item])), self.labels[item], self.imgs[item]
-        return img, label, item, img_path
+    def __getitem__(self, id):
+        """ 根据 id 获得数据集里面对应图片的信息
+        Args：
+            id：图片的序号
+        
+        Returns：
+            img：经过处理后的图片tensor类型数据
+            label：图片对应的标签（int）
+            id：图片的序号
+            img_path: 图片的保存路径
+        """
+        img, label, img_path = self.transform(default_loader(self.imgs[id])), self.labels[id], self.imgs[id]
+        return img, label, id, img_path
 
     def get_transform(self, opt):
-        """
+        """ 图片预处理的方法
+        
         根据传递的 opt 的参数，选择图片的预处理的方法
         这个预处理打算借鉴一下 TMR 的方法，设计一下预处理相关的一些参数
 
-        不同的模型的图片的size不一样
+        不同的模型的图片的size可能不一样
         这个的话，后续看看如何统一管理
         抽取出来，写成一个单独的模块？？？
         """
@@ -150,6 +174,7 @@ class FramewiseDataset(Dataset):
         #         transforms.Resize((299,299)),
         #         transforms.ToTensor()
         # ])
+        # TODO
     
         return transforms.Compose([
                 transforms.Resize((224,224)),
@@ -157,6 +182,13 @@ class FramewiseDataset(Dataset):
         ])
 
     def read_labels(self, label_file):
+        """ 把 label.txt 里面的 phase 都转变成 label
+        Args:
+            label_file: 读取的文件名（label.txt)
+        
+        Return:
+            labels: 就是 labels 哈哈哈
+        """
         with open(label_file,'r') as f:
             phases = [line.strip().split('\t')[1] for line in f.readlines()]
             labels = phase2label(phases, phase2label_dicts[self.dataset])
@@ -164,7 +196,7 @@ class FramewiseDataset(Dataset):
 
     def get_num_each_video(self):
         """
-        返回一个list, 包含每个视频的图片数。
+        返回一个list, 里面包含每个视频的图片数。
         """
         return self.num_each_video
 
@@ -173,7 +205,9 @@ class VideoDataset(Dataset):
     NETE 的 dataset 定义
     里面关于 mask 和 corss-validate 部分目前没有看明白
     """
+    # TODO 还没有整合
     def __init__(self, dataset, root, sample_rate, video_feature_folder, blacklist=[]):
+
         self.dataset = dataset
         self.sample_rate = sample_rate
         self.blacklist = blacklist # for cross-validate
@@ -219,6 +253,9 @@ class TestVideoDataset(Dataset):
 
     一个视频对应一条数据吧(这样也就方便了后面计算每个视频的正确率)
     '''
+
+    # TODO 还没有整合
+
     def __init__(self, dataset, root, sample_rate, video_feature_folder):
         self.dataset = dataset
         self.sample_rate = sample_rate
@@ -254,8 +291,8 @@ class TestVideoDataset(Dataset):
     def __len__(self):
         return len(self.videos)
   
-    def __getitem__(self, item):
-        video, label, video_name = self.videos[item], self.labels[item], self.video_names[item]
+    def __getitem__(self, id):
+        video, label, video_name = self.videos[id], self.labels[id], self.video_names[id]
         return video, label, video_name
     
     def read_labels(self, label_file):
@@ -265,6 +302,9 @@ class TestVideoDataset(Dataset):
         return labels
     
 if __name__ == "__main__":
+    """
+    UNIT TEST
+    """
     current_path = os.getcwd()
     print("当前程序运行的路径：", current_path)
     label_folder = 'phase_annotations'

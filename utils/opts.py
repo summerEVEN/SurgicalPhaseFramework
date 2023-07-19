@@ -39,7 +39,10 @@ def parse_opt():
     parser.add_argument('--test_faeture_path', type=str, default=None, help="测试集的特征文件")
     parser.add_argument('--LFB_length', type=int, default=20, help="使用memory bank时候的")
 
-    # feature manipulation
+    # TCN
+    parser.add_argument('--out_features', type=int, default=7, help="手术阶段的类别数")
+    parser.add_argument('--mstcn_causal_conv', type=bool, default=True, help="True：使用因果卷积；False：不使用因果卷积")
+    parser.add_argument('--')
 
 
     # add_diversity_opts(parser)

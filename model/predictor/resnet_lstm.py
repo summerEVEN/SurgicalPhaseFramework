@@ -1,16 +1,3 @@
-"""
-定义一个 resnet_lstm 提取网络的 空间-时间特征
-
-发现一个需要修改的点：
-原来的 TMR 网络的代码里面，有很多地方会使用全局参数
-目前打算的修改方法：
-1. 修改函数的参数，简单粗暴地把所有参数 opt 传进来
-2. 按需传递参数
-
-两种方法都可以，具体看个人习惯吧
-
-"""
-
 import torch
 import torch.nn as nn
 from torchvision import models
@@ -19,6 +6,12 @@ import torch.nn.init as init
 
 class resnet_lstm(torch.nn.Module):
     def __init__(self, opt):
+        """
+        Args:
+            opt: opt 参数包含配置文件和配置文件脚本（./utils/opts.py）里面的所有参数
+            担心这样传参会不会非常臃肿（但是我懒得写函数的接口了）
+            
+        """
         super(resnet_lstm, self).__init__()
         resnet = models.resnet50(weights = models.ResNet50_Weights.DEFAULT)
         self.share = torch.nn.Sequential()
@@ -54,6 +47,15 @@ class resnet_lstm(torch.nn.Module):
         return y
     
 class resnet_lstm_feature(torch.nn.Module):
+    """
+    和上面的网络的不同之处，就是注释掉的那部分
+    上面的是用于训练的网络结构，最后的输出是预测的label
+
+    这个是用于提取特征，最后的输出是大小为 512 的特征 
+    （不需要训练，直接加载使用上面的网络结构训练好的参数即可）
+    （关于 512 这个数值，这里是把它固定了，但是其他的特征提取网络得到的特征大小不是 512）
+    （可能也需要添加一个参数加入到 opt.py 里？？）
+    """
     def __init__(self, opt):
         super(resnet_lstm_feature, self).__init__()
         resnet = models.resnet50(weights = models.ResNet50_Weights.DEFAULT)

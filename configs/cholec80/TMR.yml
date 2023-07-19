@@ -1,10 +1,11 @@
+model_name: TMR
 learning_rate: 0.0001
 batch_size: 40
-epoch: 30
+epoch: 3
 sequence_length: 4
 workers: 4
-model_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/model/resnet_lstm/3-0.4305.model
+model_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/model/resnet_lstm/0-0.3808.model
 is_time_conv: True
 train_feature_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/feature/resnet_lstm/g_LFB_train_st.pkl
-test_feature_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/feature/resnet_lstm/g_LFB_test_st.pkl
+val_feature_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/feature/resnet_lstm/g_LFB_test_st.pkl
 LFB_length: 30

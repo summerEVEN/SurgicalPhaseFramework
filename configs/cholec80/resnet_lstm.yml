@@ -1,8 +1,9 @@
+model_name: resnet_lstm
 learning_rate: 0.0001
 batch_size: 40
-epoch: 30
+epoch: 3
 sequence_length: 4
 workers: 4
 id: 类似与一个标识符
-model_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/model/resnet_lstm/3-0.4305.model
+model_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/model/resnet_lstm/0-0.3808.model
 # extract，或者 test 操作时，使用的模型的路径

@@ -10,13 +10,13 @@ import copy
 """
 
 class MultiStageModel(nn.Module):
-    def __init__(self, mstcn_stages, mstcn_layers, mstcn_f_maps, mstcn_f_dim, out_features, mstcn_causal_conv):
-        self.num_stages = mstcn_stages  # 2
-        self.num_layers = mstcn_layers  # 8
-        self.num_f_maps = mstcn_f_maps  # 32
-        self.dim = mstcn_f_dim  #2048
-        self.num_classes = out_features  # 7
-        self.causal_conv = mstcn_causal_conv
+    def __init__(self, opt):
+        self.num_stages = opt.mstcn_stages  # 2
+        self.num_layers = opt.mstcn_layers  # 8
+        self.num_f_maps = opt.mstcn_f_maps  # 32
+        self.dim = opt.mstcn_f_dim  #2048
+        self.num_classes = opt.out_features  # 7
+        self.causal_conv = opt.mstcn_causal_conv
         print(
             f"num_stages_classification: {self.num_stages}, num_layers: {self.num_layers}, num_f_maps:"
             f" {self.num_f_maps}, dim: {self.dim}")

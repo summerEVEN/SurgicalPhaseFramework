@@ -53,7 +53,7 @@ def train(opt, train_dataset, test_dataset, device, save_dir = "./result/model/T
     learning_rate = opt.learning_rate
     sequence_length = opt.sequence_length
     train_feature_path = opt.train_feature_path
-    test_feature_path = opt.test_feature_path
+    val_feature_path = opt.val_feature_path
     model_path = opt.model_path
     epochs = opt.epoch
 
@@ -71,7 +71,7 @@ def train(opt, train_dataset, test_dataset, device, save_dir = "./result/model/T
     with open(train_feature_path, 'rb') as f:
         g_LFB_train = pickle.load(f)
 
-    with open(test_feature_path, 'rb') as f:
+    with open(val_feature_path, 'rb') as f:
         g_LFB_val = pickle.load(f)
 
     print("g_LFB_train shape:",g_LFB_train.shape)
@@ -158,7 +158,7 @@ def test(opt, model, test_dataset, device):
     test_loader = dataset_propre(opt, test_dataset)
     dict_val_start_idx_LFB = get_dict_start_idx_LFB(sequence_length, test_dataset)
 
-    with open(opt.test_feature_path, 'rb') as f:
+    with open(opt.val_feature_path, 'rb') as f:
         g_LFB_val = pickle.load(f)
     
     with torch.no_grad():

@@ -1,3 +1,4 @@
+model_name: trans_svnet
 out_features: 7
 num_workers: 3
 batch_size: 1

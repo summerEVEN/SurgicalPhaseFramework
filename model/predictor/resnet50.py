@@ -28,6 +28,9 @@ class resnet50(torch.nn.Module):
         return y
     
 class resnet_feature(torch.nn.Module):
+    """
+    用于提取特征，最后的输出是大小为 2048 的特征
+    """
     def __init__(self):
         super(resnet_feature, self).__init__()
         resnet = models.resnet50(weights = models.ResNet50_Weights.DEFAULT)
@@ -49,4 +52,5 @@ class resnet_feature(torch.nn.Module):
         x = x.view(-1, 3, 224, 224)
         x = self.share.forward(x)
         x = x.view(-1, 2048)
+        # y = self.fc(x)
         return x
