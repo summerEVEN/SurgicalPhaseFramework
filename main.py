@@ -24,17 +24,17 @@ parser.add_argument('--dataset', default="cholec80", help='选择的数据集')
 # parser.add_argument('--sample_rate', default=2, type=int, help='图片的采样率， fps原始为25')
 # parser.add_argument('--predictor_model', default='resnet_lstm', help='特征提取的模型')
 # parser.add_argument('--model_name', default='resnet_lstm', help='模型')
-parser.add_argument('--model_path', default='', help='模型的路径，用来提取特征')
+# parser.add_argument('--model_path', default='', help='模型的路径，用来提取特征')
 parser.add_argument('--device', type=str, default="cuda")
 
 args, args2 = parser.parse_known_args()
+# parse_known_args() 只更新已知的参数，多余的参数传递给后面的 parser 使用
 
 print(args)
 print(args2)
 
-# 加载其他模型的参数（比如配置文件等等）
+# 加载其他模型的参数（比如配置文件里面的参数等等）
 opt = opts.parse_opt()
-# print(opt)
 
    
 def seed_everything(seed=123): # original one is 123, 3407
@@ -50,10 +50,11 @@ def seed_everything(seed=123): # original one is 123, 3407
 
 def cuda_test():
     """
-    如果GPU可用，就使用GPU0，如果没有空闲GPU，就啥也不干
+    如果GPU可用，就使用GPU，如果没有空闲GPU，就啥也不干
+    还有一些问题，需要判断GPU是否被占用（使用 is_avaliable()　函数判断不可行）
     """
     if torch.cuda.is_available():
-        device = torch.device("cuda:0")
+        device = torch.device("cuda:1")
         print("GPU可用")
         return device
     else:
@@ -61,36 +62,26 @@ def cuda_test():
         print("GPU不可用，也不想使用CPU，先去干点别的事情吧")
         return False
 
-# from model.predictor import resnet_lstm
-# model = resnet_lstm(opt)
-
-def select_model():
-    model_name = args.model
-    if model_name == "resnet_lstm":
-        from model.predictor import resnet_lstm
-        model = resnet_lstm(opt)
-        print(" resnet_lstm 加载成功 ！！！！")
-
-    return model
-
 def run():
 
+    # 加载 测试的数据集 和 训练的数据集
     train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
     train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
     test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
     test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
 
+    # 这里还有点问题，cuda_test函数存在点问题
     device = cuda_test()
     if device == False:
         print("false")
         return
-    
-    # model = select_model()
+
     model_name = opt.model_name
     action = args.action
     if action == 'train':
         if model_name == "resnet50":
             import model.predictor.resnet50 as resnet50_model
+            import script.resnet50 as train
             model = resnet50_model.resnet50()
             train.train(opt, model, train_dataset, test_dataset, device)
 
@@ -106,13 +97,6 @@ def run():
             从tcn的参数来看，out_features = 7 应该是和阶段的类别数相关
             
             """
-            out_features = 7
-            mstcn_causal_conv = True
-            mstcn_layers = 8
-            mstcn_f_maps = 32
-            mstcn_f_dim= 2048
-            mstcn_stages = 2
-
             import model.predictor.tcn as tcn_model
             model = tcn_model.MultiStageModel(opt)
             import script.tcn as tcn_action
@@ -124,7 +108,9 @@ def run():
 
             ##
             import script.TMR as train
-            train.train(opt, train_dataset, test_dataset, device)
+            import model.refinement.TMR as TMR_model
+            model = TMR_model.resnet_lstm(opt)
+            train.train(opt, model, train_dataset, test_dataset, device)
             # (opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/resnet_lstm")
 
     if action == 'eval':

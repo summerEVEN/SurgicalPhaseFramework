@@ -43,6 +43,7 @@ class resnet_lstm(torch.nn.Module):
         y = y.contiguous().view(-1, 512)
         y = y[self.sequence_length - 1::self.sequence_length]
 
+        # 是否使用 time_conv 这里还有一点不太对劲的地方
         if self.is_time_conv:
             Lt = self.time_conv(long_feature)
             y_1 = self.nl_block(y, Lt)

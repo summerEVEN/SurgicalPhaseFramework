@@ -25,7 +25,9 @@ def parse_opt():
 
 
     # Model settings
+    parser.add_argument('--id', type=str, default=None, help="随便写点关于这次训练的一些信息？")
     parser.add_argument('--model_name', type=str, default=None, help='模型的名称')
+    parser.add_argument('--epoch', type=int, default=3, help="训练轮次")
 
     parser.add_argument('--batch_size', type=int, default=60, help="批大小")
     parser.add_argument('--sequence_length', type=int, default=4, help="视频片段的长度")
@@ -33,16 +35,22 @@ def parse_opt():
     parser.add_argument('--workers', type=int, default=4, help="^")
     parser.add_argument('--model_path', type=str, help="模型的路径")
 
-    # TMR
-    parser.add_argument('--is_time_conv', type=bool, default=False, help="是否使用时间卷积")
     parser.add_argument('--train_feature_path', type=str, default=None, help="训练集的特征")
     parser.add_argument('--test_faeture_path', type=str, default=None, help="测试集的特征文件")
-    parser.add_argument('--LFB_length', type=int, default=20, help="使用memory bank时候的")
+
+    # TMR
+    parser.add_argument('--is_time_conv', type=bool, default=False, help="是否使用时间卷积")
+    parser.add_argument('--LFB_length', type=int, default=20, help="使用memory bank时候的查找特征的长度")
 
     # TCN
-    parser.add_argument('--out_features', type=int, default=7, help="手术阶段的类别数")
+    parser.add_argument('--out_features', type=int, default=7, help="手术阶段的类别数,TCN输出的特征大小")
     parser.add_argument('--mstcn_causal_conv', type=bool, default=True, help="True：使用因果卷积；False：不使用因果卷积")
-    parser.add_argument('--')
+    parser.add_argument('--mstcn_layers', type=int, default=8, help="一个TCN的层数")
+    parser.add_argument('--mstcn_f_maps', type=int, default=32, help="TCN特征的大小??")
+    parser.add_argument('--mstcn_f_dim', type=int, default=2048, help="TCN特征的大小??")
+    parser.add_argument('--mstcn_stages', type=int, default=2, help="几个TCN")
+
+    # parser.add_argument('--')
 
 
     # add_diversity_opts(parser)
@@ -90,6 +98,9 @@ def parse_opt():
         args, _ = parser.parse_known_args(namespace=args)
 
     # 读取完 configs 文件后，需要保证参数的正确性（排除掉不符合模型结构的数据）
+    """
+    这个部分后期可以补上(在模型训练前保证参数设置合理)
+    """
     # Check if args are valid
     # assert args.rnn_size > 0, "rnn_size should be greater than 0"
     # assert args.num_layers > 0, "num_layers should be greater than 0"

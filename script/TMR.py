@@ -11,14 +11,11 @@ import copy
 import time
 import pickle
 import os
+from tqdm import tqdm
 
-__all__ = ['train', 'test', "extract"]
+__all__ = ['train', 'test']
 
 """
-            print(" TMR 开始加载 ")
-            import model.refinement.TMR as TMR_model
-            model = TMR_model.resnet_lstm(opt)
-            print(" TMR 加载成功 ！！！！")
 """
 def get_long_feature(opt, start_index_list, dict_start_idx_LFB, lfb):
     long_feature = []
@@ -40,13 +37,12 @@ def get_long_feature(opt, start_index_list, dict_start_idx_LFB, lfb):
         long_feature.append(long_feature_each)
     return long_feature
 
-def train(opt, train_dataset, test_dataset, device, save_dir = "./result/model/TMR", debug = True):
+def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/TMR", debug = True):
     """
     TMR 模型的训练函数
     1. 实例化模型，加载前面训练好的 resnet_lstm 模型的参数
+    2. 正常训练
     """
-    import model.refinement.TMR as TMR_model
-    model = TMR_model.resnet_lstm(opt)
     model.load_state_dict(torch.load(opt.model_path), strict=False)
     model.to(device)
 
@@ -93,50 +89,49 @@ def train(opt, train_dataset, test_dataset, device, save_dir = "./result/model/T
     best_epoch = 0
 
     for epoch in range(epochs):
-        torch.cuda.empty_cache()
-        model.train()
-        train_loss_phase = 0.0
-        train_corrects_phase = 0
-        total = 0
-        batch_progress = 0.0
-        running_loss_phase = 0.0
-        train_start_time = time.time()
+        with tqdm(total=len(train_dataset), desc=f"Epoch {epoch+1}", unit="batch") as progress_bar:
+            torch.cuda.empty_cache()
+            model.train()
+            train_loss_phase = 0.0
+            train_corrects_phase = 0
+            total = 0
+            batch_progress = 0.0
+            running_loss_phase = 0.0
+            train_start_time = time.time()
 
-        for i, data in enumerate(train_loader):
-            optimizer.zero_grad()
-            inputs, labels_phase = data[0].to(device), data[1].to(device)
-            labels_phase = labels_phase[(sequence_length - 1)::sequence_length]
+            for i, data in enumerate(train_loader):
+                optimizer.zero_grad()
+                inputs, labels_phase = data[0].to(device), data[1].to(device)
+                labels_phase = labels_phase[(sequence_length - 1)::sequence_length]
 
-            start_index_list = data[2]
-            start_index_list = start_index_list[0::sequence_length]
-            long_feature = get_long_feature(opt,
-                                            start_index_list=start_index_list,
-                                            dict_start_idx_LFB=dict_train_start_idx_LFB,
-                                            lfb=g_LFB_train)
+                start_index_list = data[2]
+                start_index_list = start_index_list[0::sequence_length]
+                long_feature = get_long_feature(opt,
+                                                start_index_list=start_index_list,
+                                                dict_start_idx_LFB=dict_train_start_idx_LFB,
+                                                lfb=g_LFB_train)
 
-            long_feature = (torch.Tensor(np.array(long_feature))).to(device)
+                long_feature = (torch.Tensor(np.array(long_feature))).to(device)
 
-            inputs = inputs.view(-1, sequence_length, 3, 224, 224)
-            # TODO
-            outputs_phase = model.forward(inputs, long_feature=long_feature)
+                inputs = inputs.view(-1, sequence_length, 3, 224, 224)
+                # TODO
+                outputs_phase = model.forward(inputs, long_feature=long_feature)
 
-            _, preds_phase = torch.max(outputs_phase.data, 1)
-            loss_phase = criterion_phase(outputs_phase, labels_phase)
+                _, preds_phase = torch.max(outputs_phase.data, 1)
+                loss_phase = criterion_phase(outputs_phase, labels_phase)
 
-            loss = loss_phase
-            loss.backward()
-            optimizer.step()
+                loss = loss_phase
+                loss.backward()
+                optimizer.step()
 
-            running_loss_phase += loss_phase.data.item()
-            train_loss_phase += loss_phase.data.item()
+                running_loss_phase += loss_phase.data.item()
+                train_loss_phase += loss_phase.data.item()
 
-            batch_corrects_phase = torch.sum(preds_phase == labels_phase.data)
-            train_corrects_phase += batch_corrects_phase
+                batch_corrects_phase = torch.sum(preds_phase == labels_phase.data)
+                train_corrects_phase += batch_corrects_phase
 
-            # print(type(labels_phase.data))
-            # print(len(labels_phase.data))
-            total += len(labels_phase.data)
-            # ------------- len(这里可能有问题)
+                total += len(labels_phase.data)
+                progress_bar.update(len(labels_phase.data))
 
         epoch_acc = train_corrects_phase / total
         epoch_loss = train_loss_phase / total
@@ -162,30 +157,32 @@ def test(opt, model, test_dataset, device):
         g_LFB_val = pickle.load(f)
     
     with torch.no_grad():
-        correct = 0
-        total = 0
-        for data in test_loader:
-            inputs, labels_phase = data[0].to(device), data[1].to(device)
-            labels_phase = labels_phase[(sequence_length - 1)::sequence_length]
+        with tqdm(total=len(test_dataset), desc="Test", unit="batch") as progress_bar:
+            correct = 0
+            total = 0
+            for data in test_loader:
+                inputs, labels_phase = data[0].to(device), data[1].to(device)
+                labels_phase = labels_phase[(sequence_length - 1)::sequence_length]
 
-            start_index_list = data[2]
-            start_index_list = start_index_list[0::sequence_length]
-            long_feature = get_long_feature(opt,
-                                            start_index_list=start_index_list,
-                                            dict_start_idx_LFB=dict_val_start_idx_LFB,
-                                            lfb=g_LFB_val)
+                start_index_list = data[2]
+                start_index_list = start_index_list[0::sequence_length]
+                long_feature = get_long_feature(opt,
+                                                start_index_list=start_index_list,
+                                                dict_start_idx_LFB=dict_val_start_idx_LFB,
+                                                lfb=g_LFB_val)
 
-            long_feature = (torch.Tensor(np.array(long_feature))).to(device)
+                long_feature = (torch.Tensor(np.array(long_feature))).to(device)
 
-            inputs = inputs.view(-1, sequence_length, 3, 224, 224)
-            # TODO
-            outputs_phase = model.forward(inputs, long_feature=long_feature)
-            inputs = inputs.view(-1, sequence_length, 3, 224, 224)
+                inputs = inputs.view(-1, sequence_length, 3, 224, 224)
+                # TODO
+                outputs_phase = model.forward(inputs, long_feature=long_feature)
+                inputs = inputs.view(-1, sequence_length, 3, 224, 224)
 
-            _, preds_phase = torch.max(outputs_phase.data, 1)
+                _, preds_phase = torch.max(outputs_phase.data, 1)
 
-            correct += torch.sum(preds_phase == labels_phase.data)
-            total +=  len(labels_phase.data)
+                correct += torch.sum(preds_phase == labels_phase.data)
+                total +=  len(labels_phase.data)
+                progress_bar.update(len(labels_phase.data))
         print('Test: Acc {}'.format(correct / total))
     acc = correct / total
     return acc

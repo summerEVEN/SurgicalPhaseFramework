@@ -37,6 +37,7 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
     数据处理的流程：
         1. 把整个视频输入到模型里面，前向传递，然后预测正确率
         （重点是得到一整个视频的特征，和一整个视频的label值）
+        2. 
     """
     model.to(device)
 
@@ -59,6 +60,7 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     
+    # 获得每个视频的图片数(得到的是一个 list 数据)
     train_num_each_video = train_dataset.get_num_each_video()
 
     for epoch in range(opt.epoch):
@@ -83,7 +85,9 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
                 train_start_time = time.time()
 
                 optimizer.zero_grad()
-                print(labels_phase)
+                labels_phase = torch.Tensor(np.array(labels_phase))
+                
+                print(type(labels_phase))
                 labels_phase = labels_phase.to(device)
 
                 # labels_phase = labels_phase[(sequence_length - 1)::sequence_length]
@@ -98,6 +102,8 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
                 stages = outputs_phase.shape[0]
 
                 _, preds_phase = torch.max(outputs_phase.data, 1)
+                print(outputs_phase.shape)
+                print(labels_phase.shape)
                 loss_phase = criterion_phase(outputs_phase, labels_phase)
 
                 loss = loss_phase
