@@ -124,12 +124,19 @@ def run():
         """
         print("TODO")
 
+        if model_name == "TMR":
+            import script.TMR as TMR
+            import model.refinement.TMR as TMR_model
+            model = TMR_model.resnet_lstm(opt)
+            # TMR.evaluate_and_visualize(opt, model, test_dataset, device)
+            TMR.evaluate_and_visualize(opt, model, train_dataset, device)
+
     if args.action == 'extract':
         if model_name == "resnet50":
-            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
-            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
-            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
-            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
+            # train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            # train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            # test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            # test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
 
             import model.predictor.resnet50 as resnet50
             import script.resnet50 as resnet50_model
@@ -137,10 +144,10 @@ def run():
             resnet50_model.extract(opt, model, train_dataset, test_dataset, device)
             # def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature/resnet_lstm")    
         if model_name == "resnet_lstm":
-            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
-            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
-            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
-            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
+            # train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            # train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            # test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            # test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
 
             import model.predictor.resnet_lstm as resnet_lstm
             import script.resnet_lstm as resnet_lstm_model
@@ -148,15 +155,10 @@ def run():
             resnet_lstm_model.extract(opt, model, train_dataset, test_dataset, device)
 
         if model_name == "tcn":
-            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
-            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
-            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
-            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
-
             import model.predictor.tcn as tcn_model
             import script.tcn as tcn_action
             model = resnet_lstm_model.resnet_lstm(opt)
-            tcn_action.extract(opt, model, train_dataset, test_dataset, device)
+            tcn_action.extract()
 
 
 if __name__ == '__main__':  

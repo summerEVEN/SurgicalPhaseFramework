@@ -153,7 +153,7 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
 
 
     with torch.no_grad():
-        with tqdm(total=len(train_dataset), desc="train", unit="batch") as progress_bar:
+        with tqdm(total=len(train_dataset), desc="extract train", unit="batch") as progress_bar:
             for data in train_loader:
                 inputs, labels_phase = data[0].to(device), data[1].to(device)
 
@@ -174,7 +174,7 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
             progress_bar.close()
             
 
-        with tqdm(total=len(test_dataset), desc="test", unit="batch") as progress_bar:
+        with tqdm(total=len(test_dataset), desc="extract test", unit="batch") as progress_bar:
             for data in test_loader:
                 inputs, labels_phase = data[0].to(device), data[1].to(device)
 

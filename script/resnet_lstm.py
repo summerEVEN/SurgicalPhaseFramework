@@ -141,7 +141,7 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
         
     print("train success!")
 
-def test(opt, model, test_dataset, device):
+def test(opt, model, test_dataset, device, dir_res="./result/label/resnet_lstm"):
     """
     resnet_lstm
     """

@@ -6,14 +6,14 @@ from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import Sampler
 
 from script.data_propre import dataset_propre, get_dict_start_idx_LFB
-
+from utils.ribbon import visualize_predictions_and_ground_truth
 import copy
 import time
 import pickle
 import os
 from tqdm import tqdm
 
-__all__ = ['train', 'test']
+__all__ = ['train', 'test', 'evaluate_and_visualize']
 
 """
 """
@@ -172,13 +172,94 @@ def test(opt, model, test_dataset, device):
                                                 lfb=g_LFB_val)
 
                 long_feature = (torch.Tensor(np.array(long_feature))).to(device)
-
                 inputs = inputs.view(-1, sequence_length, 3, 224, 224)
-                # TODO
                 outputs_phase = model.forward(inputs, long_feature=long_feature)
-                inputs = inputs.view(-1, sequence_length, 3, 224, 224)
+
 
                 _, preds_phase = torch.max(outputs_phase.data, 1)
+
+                correct += torch.sum(preds_phase == labels_phase.data)
+                total +=  len(labels_phase.data)
+                progress_bar.update(len(labels_phase.data))
+        print('Test: Acc {}'.format(correct / total))
+    acc = correct / total
+    return acc
+
+def evaluate_and_visualize(opt, model, test_dataset, device):
+    """
+    生成每个视频的可视化结果，以及每个视频预测的结果的txt文档
+    1. 根据数据集里面的 get_num_each_video , 把每个视频的图片区分开（使用for循环处理）
+    2. 在for循环里，拼接 pred_phase_v 和 label_phase_v,记录当前视频预测正确的图片数
+    3. 
+    """
+    sequence_length = opt.sequence_length
+    model.load_state_dict(torch.load(opt.eval_model_path), strict=False)
+    model.to(device)
+    model.eval()
+    
+    test_loader = dataset_propre(opt, test_dataset)
+    dict_val_start_idx_LFB = get_dict_start_idx_LFB(sequence_length, test_dataset)
+
+    with open(opt.val_feature_path, 'rb') as f:
+        g_LFB_val = pickle.load(f)
+    
+    with torch.no_grad():
+        with tqdm(total=len(test_dataset), desc="Test", unit="batch") as progress_bar:
+            correct = 0
+            total = 0
+
+            # 用来记录所有视频的预测结果和groun_turth的值
+            all_pred_phase = []
+            all_label_phase = []
+            
+            # 获取每个视频的图片数，然后减去序列长度，得到每个视频的视频片段数
+            test_num_each_video = test_dataset.get_num_each_video()
+            test_clip_each_video = [x - sequence_length for x in test_num_each_video]
+
+            # 记录当前处理的视频数
+            video_processed_num = 0
+
+            for data in test_loader:
+                inputs, labels_phase = data[0].to(device), data[1].to(device)
+                labels_phase = labels_phase[(sequence_length - 1)::sequence_length]
+
+                start_index_list = data[2]
+                start_index_list = start_index_list[0::sequence_length]
+                long_feature = get_long_feature(opt,
+                                                start_index_list=start_index_list,
+                                                dict_start_idx_LFB=dict_val_start_idx_LFB,
+                                                lfb=g_LFB_val)
+
+                long_feature = (torch.Tensor(np.array(long_feature))).to(device)
+
+                inputs = inputs.view(-1, sequence_length, 3, 224, 224)
+                outputs_phase = model.forward(inputs, long_feature=long_feature)
+
+
+                _, preds_phase = torch.max(outputs_phase.data, 1)
+                """
+                把 preds_phase 按照视频的帧数拼接，然后保存到一个txt文件里面
+                同时生成和 ground_turth 的对比图片，下面带上这个图片的正确率
+                """
+                # visualize_predictions_and_ground_truth(preds_phase_v, labels_phase_v, acc, video_num, opt.model_name, save_dir='./result/visualization/')
+
+                all_pred_phase.extend(preds_phase.tolist())
+                all_label_phase.extend(labels_phase.tolist())
+
+                if(len(all_label_phase) >= test_clip_each_video[video_processed_num]):
+                    # 如果符合判断条件，说明当前视频的所有clip处理完成，可以生成当前视频的预测结果
+
+                    count_same_elements = sum(i == j for i, j in zip(all_pred_phase, all_label_phase))
+                    img_path = data[3][0]
+                    video_name = os.path.split(os.path.split(img_path)[0])[1]
+                    visualize_predictions_and_ground_truth(all_pred_phase[: test_clip_each_video[video_processed_num]], 
+                                                           all_label_phase[: test_clip_each_video[video_processed_num]], 
+                                                           count_same_elements/test_clip_each_video[video_processed_num], 
+                                                           video_name, opt.model_name, save_dir='./result/visualization/')
+                    
+                    all_pred_phase = all_pred_phase[test_clip_each_video[video_processed_num] :]
+                    all_label_phase = all_label_phase[test_clip_each_video[video_processed_num] :]
+                    video_processed_num = video_processed_num + 1
 
                 correct += torch.sum(preds_phase == labels_phase.data)
                 total +=  len(labels_phase.data)

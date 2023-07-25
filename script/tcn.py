@@ -1,6 +1,7 @@
 """
-            tcn_action.train(opt, model, train_dataset, test_dataset, device)
-            # (opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/resnet_lstm")
+目前对TCN的网络的结构,还是不太清楚,所以这部分代码修改得不太理想,糟糕
+
+好家伙，得注意使用resnet50生成的特征的视频数，如果不存在那么多特征，后续的运行会出错
 """
 
 import os
@@ -19,15 +20,17 @@ import time
 import pickle
 from tqdm import tqdm
 
-__all__ = ['train', 'test', "extract"]
+__all__ = ['train']
 
 def get_long_feature(start_index, lfb, LFB_length):
+    # print("start_index: ", start_index, "length: ", LFB_length)
     long_feature = []
     long_feature_each = []
     # 上一个存在feature的index
     for k in range(LFB_length):
         LFB_index = (start_index + k)
         LFB_index = int(LFB_index)
+        # print(LFB_index)
         long_feature_each.append(lfb[LFB_index])
     long_feature.append(long_feature_each)
     return long_feature
@@ -41,16 +44,26 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
     """
     model.to(device)
 
-    criterion_phase = nn.CrossEntropyLoss(reduction='sum')
+    # criterion_phase = nn.CrossEntropyLoss(reduction='sum')
+    weights_train = np.asarray([1.6411019141231247,
+            0.19090963801041133,
+            1.0,
+            0.2502662616859295,
+            1.9176363911137977,
+            0.9840248158200853,
+            2.174635818337618,])
+    criterion_phase = nn.CrossEntropyLoss(weight=torch.from_numpy(weights_train).float().to(device))
     optimizer = optim.Adam(model.parameters(), lr=opt.learning_rate, weight_decay=1e-5)
 
     sequence_length = opt.sequence_length
 
     with open(opt.train_feature_path, 'rb') as f:
         g_LFB_train = pickle.load(f)
+        print(g_LFB_train.shape)
 
     with open(opt.test_feature_path, 'rb') as f:
         g_LFB_val = pickle.load(f)
+        print(g_LFB_val.shape)
 
     best_model_wts = copy.deepcopy(model.state_dict())
     best_accuracy = 0.0
@@ -62,66 +75,67 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
     
     # 获得每个视频的图片数(得到的是一个 list 数据)
     train_num_each_video = train_dataset.get_num_each_video()
+    print("train_num_each_video: ", train_num_each_video)
 
     for epoch in range(opt.epoch):
         with tqdm(total=len(train_dataset), desc=f"Epoch {epoch+1}", unit="batch") as progress_bar:
             video_phase_count = 0
+
+            model.train()
+            total = 0
+            train_loss_phase = 0.0
+            train_corrects_phase = 0
+            running_loss_phase = 0.0
+            minibatch_correct_phase = 0.0
+            train_start_time = time.time()
             for i, video_num in enumerate(train_num_each_video):
+                optimizer.zero_grad()
                 
                 labels_phase = []
-                for j in range(video_phase_count, video_phase_count + video_num):
+                for j in range(video_phase_count, video_phase_count + video_num - opt.sequence_length):
                     labels_phase.append(train_dataset[j][1])
 
-                torch.cuda.empty_cache()
-
                 # Sets the module in training mode.
-                model.train()
-                total = 0
-                train_loss_phase = 0.0
-                train_corrects_phase = 0
-                batch_progress = 0.0
-                running_loss_phase = 0.0
-                minibatch_correct_phase = 0.0
-                train_start_time = time.time()
 
-                optimizer.zero_grad()
-                labels_phase = torch.Tensor(np.array(labels_phase))
-                
-                print(type(labels_phase))
+                # labels_phase = torch.Tensor(np.array(labels_phase))
+                labels_phase = torch.LongTensor(np.array(labels_phase))
                 labels_phase = labels_phase.to(device)
 
-                # labels_phase = labels_phase[(sequence_length - 1)::sequence_length]
-
-
                 long_feature = get_long_feature(start_index=video_phase_count,
-                                        lfb=g_LFB_train, LFB_length=video_num)
+                                        lfb=g_LFB_train, LFB_length=video_num - opt.sequence_length)
                 long_feature = (torch.Tensor(long_feature)).to(device)
                 video_fe = long_feature.transpose(2, 1)
 
                 outputs_phase = model.forward(video_fe)
+                # print("outputs_phase.shape: ", outputs_phase.shape)
                 stages = outputs_phase.shape[0]
 
-                _, preds_phase = torch.max(outputs_phase.data, 1)
-                print(outputs_phase.shape)
-                print(labels_phase.shape)
-                loss_phase = criterion_phase(outputs_phase, labels_phase)
 
-                loss = loss_phase
+                clc_loss = 0
+                for j in range(stages):  ### make the interuption free stronge the more layers.
+                    p_classes = []
+                    p_classes = outputs_phase[j].squeeze().transpose(1, 0)
+                    ce_loss = criterion_phase(p_classes, labels_phase)
+                    clc_loss += ce_loss
+                clc_loss = clc_loss / (stages * 1.0)
+
+                _, preds_phase = torch.max(outputs_phase[stages-1].squeeze().transpose(1, 0).data, 1)
+
+                loss = clc_loss
+                # print(loss)
                 loss.backward()
                 optimizer.step()
 
-                running_loss_phase += loss_phase.data.item()
-                train_loss_phase += loss_phase.data.item()
+                running_loss_phase += clc_loss.data.item()
+                train_loss_phase += clc_loss.data.item()
 
                 batch_corrects_phase = torch.sum(preds_phase == labels_phase.data)
                 train_corrects_phase += batch_corrects_phase
                 total += len(labels_phase.data)
 
                 progress_bar.update(video_num)
-                # ！！！！
                 video_phase_count = video_phase_count + video_num
         progress_bar.close()
-
 
         train_elapsed_time = time.time() - train_start_time
 
@@ -132,7 +146,6 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
         """
         保存当前最优秀的模型
         """
-        debug = False
         if debug:
             acc = test(opt, model, test_dataset, device)
             if(acc > best_accuracy):
@@ -161,6 +174,8 @@ def test(opt, model, test_dataset, device):
                 labels_phase = []
                 for j in range(video_phase_count, video_phase_count + video_num):
                     labels_phase.append(test_dataset[j][1])
+                labels_phase = torch.LongTensor(np.array(labels_phase))
+                labels_phase = labels_phase.to(device)
                 
                 long_feature = get_long_feature(start_index=video_phase_count,
                                         lfb=g_LFB_val, LFB_length=video_num)
@@ -168,13 +183,16 @@ def test(opt, model, test_dataset, device):
                 video_fe = long_feature.transpose(2, 1)
 
                 outputs_phase = model.forward(video_fe)
+                stages = outputs_phase.shape[0]
 
-                _, preds_phase = torch.max(outputs_phase.data, 1)
+                # _, preds_phase = torch.max(outputs_phase.data, 1)
+                _, preds_phase = torch.max(outputs_phase[stages-1].squeeze().transpose(1, 0).data, 1)
+
+                # print(preds_phase.is_cuda)
+                # print(labels_phase.is_cuda)
 
                 correct += torch.sum(preds_phase == labels_phase.data)
                 total += len(labels_phase.data)
-                progress_bar.update(video_num)
-
                 progress_bar.update(video_num)
                 # ！！！！
                 video_phase_count = video_phase_count + video_num
@@ -186,5 +204,7 @@ def test(opt, model, test_dataset, device):
 
 
 def extract():
-
-    print("Feature ectract success!")
+    """
+    这个好像不需要提前提取特征，这个函数用不到
+    """
+    print("tcn不需要提前提取特征")

@@ -125,10 +125,11 @@ class FramewiseDataset(Dataset):
             #     self.imgs.append(os.path.join(v_abs_path, image))
             #     self.labels.append(labels[image_index])
             for i in range(len(labels)):
-                if i * down_sampling > len(labels):
+                if i * down_sampling >= len(labels):
                     self.num_each_video.append(i)
                     break
                 self.labels.append(labels[i * down_sampling])
+                # print(i * down_sampling, len(labels), v)
                 self.imgs.append(os.path.join(v_abs_path, str(i * down_sampling) + ".jpg")) 
 
                 # print(i)

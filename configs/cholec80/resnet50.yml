@@ -1,7 +1,7 @@
 model_name: resnet50
 learning_rate: 0.0001
-batch_size: 40
+batch_size: 400
 epoch: 3
 sequence_length: 4
 workers: 4
-model_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/model/resnet50/1-0.3857.model
+model_path: ./result/model/resnet50/2-0.8079.model
