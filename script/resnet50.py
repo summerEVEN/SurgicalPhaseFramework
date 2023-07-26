@@ -110,10 +110,10 @@ def test(opt, model, test_dataset, device):
     
     with torch.no_grad():
         with tqdm(total=len(test_dataset), desc="test", unit="batch") as progress_bar:
-
             correct = 0
             total = 0
             for data in test_loader:
+                torch.cuda.empty_cache()
                 inputs, labels_phase = data[0].to(device), data[1].to(device)
                 labels_phase = labels_phase[(sequence_length - 1)::sequence_length]
                 inputs = inputs.view(-1, sequence_length, 3, 224, 224)
@@ -155,20 +155,16 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
     with torch.no_grad():
         with tqdm(total=len(train_dataset), desc="extract train", unit="batch") as progress_bar:
             for data in train_loader:
+                torch.cuda.empty_cache()
                 inputs, labels_phase = data[0].to(device), data[1].to(device)
 
                 inputs = inputs.view(-1, opt.sequence_length, 3, 224, 224)
-                outputs_feature = model.forward(inputs)
-                # outputs_phase = outputs_phase[sequence_length - 1::sequence_length]
+                outputs_feature = model.forward(inputs).data.cpu().numpy()
 
-                for j in range(len(outputs_feature)):
-                    save_feature = outputs_feature.data.cpu()[j].numpy()
-                    # print(save_feature)
-                    # 这里reshape的 2048 和模型里面输出的大小是保持一致的
-                    # 其他模型可能不一样，这里可以考虑之后，在config里面添加对应的参数，只写一个 extract函数hhh
-                    # print(save_feature.shape)
-                    save_feature = save_feature.reshape(1, 2048)
-                    g_LFB_train = np.concatenate((g_LFB_train, save_feature),axis=0)
+                # print("---------------", outputs_feature.shape)
+
+                g_LFB_train = np.concatenate((g_LFB_train, outputs_feature),axis=0)
+                # print(g_LFB_train.shape)
                 progress_bar.update(len(outputs_feature))
                 # print("train feature length:",len(g_LFB_train))
             progress_bar.close()
@@ -176,16 +172,17 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
 
         with tqdm(total=len(test_dataset), desc="extract test", unit="batch") as progress_bar:
             for data in test_loader:
+                torch.cuda.empty_cache()
                 inputs, labels_phase = data[0].to(device), data[1].to(device)
 
                 inputs = inputs.view(-1, opt.sequence_length, 3, 224, 224)
-                outputs_feature = model.forward(inputs)
+                outputs_feature = model.forward(inputs).data.cpu().numpy()
 
-                for j in range(len(outputs_feature)):
-                    save_feature = outputs_feature.data.cpu()[j].numpy()
-                    save_feature = save_feature.reshape(1, 2048)
-                    g_LFB_val = np.concatenate((g_LFB_val, save_feature), axis=0)
-
+                # for j in range(len(outputs_feature)):
+                #     save_feature = outputs_feature.data.cpu()[j].numpy()
+                #     save_feature = save_feature.reshape(1, 2048)
+                #     g_LFB_val = np.concatenate((g_LFB_val, save_feature), axis=0)
+                g_LFB_val = np.concatenate((g_LFB_val, outputs_feature),axis=0)
                 progress_bar.update(len(outputs_feature))
                 # print("val feature length:",len(g_LFB_val))
             progress_bar.close()

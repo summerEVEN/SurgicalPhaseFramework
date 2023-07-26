@@ -1,0 +1,37 @@
+model_name: SAHC
+eval_model_path: ./result/model/cholec80/Hierarch_TCN2/hierTrue_mslossTrue_transTrue/best_58.model
+
+dataset: cholec80
+# dataset_path: ../../Dataset/SAHC/cholec80
+# dataset目前还需要根据NETE生成一下
+dataset_path: ../../Dataset/SAHC/cholec80
+sample_rate: 5
+test_sample_rate: 5
+refine_model: gru
+num_classes: 7
+model: Hierarch_TCN2
+learning_rate: 0.0005
+epochs: 100
+gpu: 3
+combine_loss: False
+ms_loss: True
+
+fpn: True
+output: False
+feature: False
+trans: True
+prototype: False
+last: False
+first: True
+hier: True
+
+#### ms-tcn2
+num_layers_PG: 11
+num_layers_R: 10
+num_R: 3
+
+## Transformer
+head_num: 8
+embed_num: 512
+block_num: 1
+positional_encoding_type: learned  #, type=str, help=fixed or learned

@@ -64,12 +64,6 @@ def cuda_test():
 
 def run():
 
-    # 加载 测试的数据集 和 训练的数据集
-    train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
-    train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
-    test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
-    test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
-
     # 这里还有点问题，cuda_test函数存在点问题
     device = cuda_test()
     if device == False:
@@ -80,12 +74,23 @@ def run():
     action = args.action
     if action == 'train':
         if model_name == "resnet50":
+            # 加载 测试的数据集 和 训练的数据集
+            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
+
             import model.predictor.resnet50 as resnet50_model
             import script.resnet50 as train
             model = resnet50_model.resnet50()
             train.train(opt, model, train_dataset, test_dataset, device)
 
         if model_name == "resnet_lstm":
+            # 加载 测试的数据集 和 训练的数据集
+            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
 
             import model.predictor.resnet_lstm as resnet_lstm_model
             import script.resnet_lstm as train
@@ -97,6 +102,12 @@ def run():
             从tcn的参数来看，out_features = 7 应该是和阶段的类别数相关
             
             """
+            # 加载 测试的数据集 和 训练的数据集
+            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
+
             import model.predictor.tcn as tcn_model
             model = tcn_model.MultiStageModel(opt)
             import script.tcn as tcn_action
@@ -105,13 +116,50 @@ def run():
             # (opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/resnet_lstm")
 
         if model_name == "TMR":
+            # 加载 测试的数据集 和 训练的数据集
+            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
 
-            ##
             import script.TMR as train
             import model.refinement.TMR as TMR_model
             model = TMR_model.resnet_lstm(opt)
             train.train(opt, model, train_dataset, test_dataset, device)
-            # (opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/resnet_lstm")
+        
+        if model_name == "SAHC":
+            # from prototype import hierarch_train,base_predict
+            # from utils import *
+            # from hierarch_tcn2 import Hierarch_TCN2
+            from script.SAHC import hierarch_train
+            from model.refinement.SAHC.hierarch_tcn2 import Hierarch_TCN2
+
+            num_stages = 3  # refinement stages
+            # if args.dataset == 'm2cai16':
+            #     num_stages = 2 # for over-fitting
+            num_layers = 12 # layers of prediction tcn e
+            num_f_maps = 64
+            dim = 2048
+            sample_rate = opt.sample_rate
+            test_sample_rate = opt.test_sample_rate
+            # num_classes = len(phase2label_dicts[args.dataset])
+            num_classes = 7
+            opt.num_classes = num_classes
+            # print(opt.num_classes)
+            num_layers_PG = opt.num_layers_PG
+            num_layers_R = opt.num_layers_R
+            num_R = opt.num_R
+
+            video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/train_dataset', sample_rate, 'video_feature')
+            video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
+            video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/test_dataset', test_sample_rate, 'video_feature')
+            video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
+
+            base_model=Hierarch_TCN2(opt, num_layers_PG, num_layers_R, num_R, num_f_maps, dim, num_classes)
+            # base_model=Hierarch_TCN2(opt)
+            model_save_dir = 'result/model/{}/'.format(args.dataset)
+            print("device", device)
+            hierarch_train(opt, base_model, video_train_dataloader, video_test_dataloader, device, save_dir=model_save_dir, debug=True)
 
     if action == 'eval':
         """
@@ -122,9 +170,46 @@ def run():
         （重点是在线识别！！！）
         （在线使用 predictor 模型把
         """
-        print("TODO")
+        if model_name == "SAHC":
+            from script.SAHC import evaluate_and_visualize
+            from model.refinement.SAHC.hierarch_tcn2 import Hierarch_TCN2
+
+            num_stages = 3  # refinement stages
+            # if args.dataset == 'm2cai16':
+            #     num_stages = 2 # for over-fitting
+            num_layers = 12 # layers of prediction tcn e
+            num_f_maps = 64
+            dim = 2048
+            sample_rate = opt.sample_rate
+            test_sample_rate = opt.test_sample_rate
+            # num_classes = len(phase2label_dicts[args.dataset])
+            num_classes = 7
+            opt.num_classes = num_classes
+            # print(opt.num_classes)
+            num_layers_PG = opt.num_layers_PG
+            num_layers_R = opt.num_layers_R
+            num_R = opt.num_R
+
+            video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/train_dataset', sample_rate, 'video_feature')
+            video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
+            video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/test_dataset', test_sample_rate, 'video_feature')
+            video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
+
+            base_model=Hierarch_TCN2(opt, num_layers_PG, num_layers_R, num_R, num_f_maps, dim, num_classes)
+            # base_model=Hierarch_TCN2(opt)
+            # model_save_dir = 'result/model/{}/'.format(args.dataset)
+            print("device", device)
+
+            evaluate_and_visualize(opt, base_model, video_test_dataloader, device)
+
 
         if model_name == "TMR":
+            # 加载 测试的数据集 和 训练的数据集
+            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
+
             import script.TMR as TMR
             import model.refinement.TMR as TMR_model
             model = TMR_model.resnet_lstm(opt)
@@ -133,10 +218,10 @@ def run():
 
     if args.action == 'extract':
         if model_name == "resnet50":
-            # train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
-            # train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
-            # test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
-            # test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
+            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
 
             import model.predictor.resnet50 as resnet50
             import script.resnet50 as resnet50_model
@@ -144,10 +229,10 @@ def run():
             resnet50_model.extract(opt, model, train_dataset, test_dataset, device)
             # def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature/resnet_lstm")    
         if model_name == "resnet_lstm":
-            # train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
-            # train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
-            # test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
-            # test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
+            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
 
             import model.predictor.resnet_lstm as resnet_lstm
             import script.resnet_lstm as resnet_lstm_model
@@ -155,6 +240,7 @@ def run():
             resnet_lstm_model.extract(opt, model, train_dataset, test_dataset, device)
 
         if model_name == "tcn":
+            # tcn 不需要预先提取特征
             import model.predictor.tcn as tcn_model
             import script.tcn as tcn_action
             model = resnet_lstm_model.resnet_lstm(opt)

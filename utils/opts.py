@@ -50,6 +50,44 @@ def parse_opt():
     parser.add_argument('--mstcn_f_dim', type=int, default=2048, help="TCN特征的大小??")
     parser.add_argument('--mstcn_stages', type=int, default=2, help="几个TCN")
 
+    # trans_svnet
+
+
+    # -----------------SAHC start----------------------
+    parser.add_argument('--dataset', default="cholec80")
+    parser.add_argument('--dataset_path', default="../../Dataset/SAHC/cholec80")
+    parser.add_argument('--sample_rate', default=5, type=int)
+    parser.add_argument('--test_sample_rate', default=5, type=int)
+    parser.add_argument('--refine_model', default='gru')
+    parser.add_argument('--num_classes', default=7)
+    parser.add_argument('--model', default="Hierarch_TCN2")
+    # parser.add_argument('--learning_rate', default=5e-4, type=float)
+    parser.add_argument('--epochs', default=100)
+    parser.add_argument('--gpu', default="3", type=str)
+    parser.add_argument('--combine_loss', default=False, type=bool)
+    parser.add_argument('--ms_loss', default=True, type=bool)
+
+    parser.add_argument('--fpn', default=True, type=bool)
+    parser.add_argument('--output', default=False, type=bool)
+    parser.add_argument('--feature', default=False, type=bool)
+    parser.add_argument('--trans', default=False, type=bool)
+    parser.add_argument('--prototype', default=False, type=bool)
+    parser.add_argument('--last', default=False, type=bool)
+    parser.add_argument('--first', default=False, type=bool)
+    parser.add_argument('--hier', default=False, type=bool)
+    ####ms-tcn2
+    parser.add_argument('--num_layers_PG', default="11", type=int)
+    parser.add_argument('--num_layers_R', default="10", type=int)
+    parser.add_argument('--num_R', default="3", type=int)
+
+    ##Transformer
+    parser.add_argument('--head_num', default=8)
+    parser.add_argument('--embed_num', default=512)
+    parser.add_argument('--block_num', default=1)
+    parser.add_argument('--positional_encoding_type', default="learned", type=str, help="fixed or learned")
+
+    # ----------------- SAHC end ----------------------
+
     # parser.add_argument('--')
 
 

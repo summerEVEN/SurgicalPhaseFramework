@@ -262,12 +262,15 @@ class TestVideoDataset(Dataset):
         self.sample_rate = sample_rate
         self.videos = []
         self.labels = []
+        self.video_names = []
 
         video_feature_folder = os.path.join(root, video_feature_folder)
         label_folder = os.path.join(root, 'annotation_folder')
 
         num_len = 0
         ans = 0
+
+        print("--------------", video_feature_folder)
 
         for v_f in os.listdir(video_feature_folder):  
             v_f_abs_path = os.path.join(video_feature_folder, v_f)
