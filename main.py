@@ -200,7 +200,8 @@ def run():
             # model_save_dir = 'result/model/{}/'.format(args.dataset)
             print("device", device)
 
-            evaluate_and_visualize(opt, base_model, video_test_dataloader, device)
+            # evaluate_and_visualize(opt, base_model, video_test_dataloader, device)
+            evaluate_and_visualize(opt, base_model, video_train_dataloader, device)
 
 
         if model_name == "TMR":
@@ -227,7 +228,8 @@ def run():
             import script.resnet50 as resnet50_model
             model = resnet50.resnet_feature()
             resnet50_model.extract(opt, model, train_dataset, test_dataset, device)
-            # def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature/resnet_lstm")    
+            # def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature/resnet_lstm")  
+              
         if model_name == "resnet_lstm":
             train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
             train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
@@ -246,6 +248,29 @@ def run():
             model = resnet_lstm_model.resnet_lstm(opt)
             tcn_action.extract()
 
+    if args.action == 'extract_video':
+        """
+        这个 extract_video 部分和前面的 extract 都是用来提取特征的
+        区别在于，extract 把整个数据集的特征提取出来后，放在一个文件里面
+        extract_video 是以视频为最小单位，得到每个视频的特征
+        （！！！！这里有一个细节没有弄明白，就是 特征/视频帧 的采样率）
+        （之前在运行 NETE 还是 SAHC 项目的时候，如果 predict 阶段和 refinement 阶段的采样率不同，会出现错误）
+        （具体什么错误忘记了，）
+        """
+        if model_name == "resnet_lstm":
+            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
+
+            import model.predictor.resnet_lstm as resnet_lstm
+            import script.resnet_lstm as resnet_lstm_model
+            model = resnet_lstm.resnet_lstm_feature(opt)
+            resnet_lstm_model.extract_video(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature_video/resnet_lstm")
+            print("TODO")
+
+        if model_name == "resnet50":
+            print("TODO")
 
 if __name__ == '__main__':  
     seed_everything()      

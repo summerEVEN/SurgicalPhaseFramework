@@ -109,6 +109,7 @@ class FramewiseDataset(Dataset):
         video_folders = os.listdir(video_folder)
         video_folders.sort()
         # 排个序（忘记是什么动机了hhh，就按照视频的名称排个序）
+        # 我把视频文件夹 1 - 9，修改为 01 - 09 了（这个可能会存在一些潜在的bug）
 
         for v in video_folders:
             if v in blacklist:

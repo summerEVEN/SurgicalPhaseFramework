@@ -1,4 +1,5 @@
 model_name: trans_svnet
+
 out_features: 7
 num_workers: 3
 batch_size: 1
@@ -13,10 +14,15 @@ mstcn_stages: 2
 
 sequence_length: 30
 
+train_feature_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/feature/resnet_lstm/g_LFB_train_st.pkl
+val_feature_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/feature/resnet_lstm/g_LFB_test_st.pkl
+
+tcn_model_path: 
+
 # 为了防止我忘记这个网络是干什么的，在这里简单记录一下
 # 它是使用 transformer，同时利用了 时间 和 空间 信息
 # 所以需要给出 空间信息（resnet50 的特征）的 path
-# 还要给出 空间信息(TCN) 的模型路径, 这里的空间信息不是提前生成的
+# 还要给出 时间信息(TCN) 的模型路径, 这里的时间信息不是提前生成的
 
 # You can refer to https://github.com/YuemingJin/TMRNet for data pre-processing.
 

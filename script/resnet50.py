@@ -178,10 +178,6 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
                 inputs = inputs.view(-1, opt.sequence_length, 3, 224, 224)
                 outputs_feature = model.forward(inputs).data.cpu().numpy()
 
-                # for j in range(len(outputs_feature)):
-                #     save_feature = outputs_feature.data.cpu()[j].numpy()
-                #     save_feature = save_feature.reshape(1, 2048)
-                #     g_LFB_val = np.concatenate((g_LFB_val, save_feature), axis=0)
                 g_LFB_val = np.concatenate((g_LFB_val, outputs_feature),axis=0)
                 progress_bar.update(len(outputs_feature))
                 # print("val feature length:",len(g_LFB_val))

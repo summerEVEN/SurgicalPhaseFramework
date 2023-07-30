@@ -202,16 +202,10 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
 
                 inputs = inputs.view(-1, opt.sequence_length, 3, 224, 224)
                 outputs_feature = model.forward(inputs)
+                g_LFB_train = np.concatenate((g_LFB_train, outputs_feature),axis=0)
 
-                for j in range(len(outputs_feature)):
-                    save_feature = outputs_feature.data.cpu()[j].numpy()
-                    # print(save_feature)
-                    # 这里reshape的 512 和模型里面输出的大小是保持一致的
-                    # 其他模型可能不一样，这里可以考虑之后，在config里面添加对应的参数，只写一个 extract函数hhh
-                    save_feature = save_feature.reshape(1, 512)
-                    g_LFB_train = np.concatenate((g_LFB_train, save_feature),axis=0)
                 progress_bar.update(len(outputs_feature))
-                # print("train feature length:",len(g_LFB_train))
+
             progress_bar.close()
             
 
@@ -222,10 +216,7 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
                 inputs = inputs.view(-1, opt.sequence_length, 3, 224, 224)
                 outputs_feature = model.forward(inputs)
 
-                for j in range(len(outputs_feature)):
-                    save_feature = outputs_feature.data.cpu()[j].numpy()
-                    save_feature = save_feature.reshape(1, 512)
-                    g_LFB_val = np.concatenate((g_LFB_val, save_feature), axis=0)
+                g_LFB_val = np.concatenate((g_LFB_val, outputs_feature), axis=0)
 
                 progress_bar.update(len(outputs_feature))
                 # print("val feature length:",len(g_LFB_val))
@@ -234,6 +225,9 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
     print("finish!")
     g_LFB_train = np.array(g_LFB_train)
     g_LFB_val = np.array(g_LFB_val)
+
+    print("len(g_LFB_train): ", len(g_LFB_train))
+    print("len(g_LFB_val): ", len(g_LFB_val))
 
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -244,6 +238,109 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
     with open(os.path.join(save_dir, "g_LFB_test_st.pkl"), 'wb') as f:
         pickle.dump(g_LFB_val, f)
 
+# def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature/resnet_lstm"):
+def extract_video(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature_video/resnet_lstm"):
+
+    sequence_length = opt.sequence_length
+    model.load_state_dict(torch.load(opt.eval_model_path), strict=False)
+    model.to(device)
+    model.eval()
+
+    if  not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    
+    train_loader = dataset_propre(opt, train_dataset)
+    test_loader = dataset_propre(opt, test_dataset)
+    
+    with torch.no_grad():
+        with tqdm(total=len(train_dataset), desc="extract train feature", unit="batch") as progress_bar:
+            video_feature_train = np.zeros(shape=(0, 512))
+            
+            # 获取每个视频的图片数，然后减去序列长度 + 1，得到每个视频的视频片段数
+            train_num_each_video = train_dataset.get_num_each_video()
+            train_clip_each_video = [x - sequence_length + 1 for x in train_num_each_video]
+
+            # print("train_clip_each_video : ", train_clip_each_video )
+
+            # 记录当前处理的视频数
+            video_processed_num = 0
+
+            # print("train_loader: ", len(train_loader))
+
+            train_loader_epoch = 0
+
+            for data in train_loader:
+                train_loader_epoch = train_loader_epoch + 1
+                inputs = data[0].to(device)
+
+                start_index_list = data[2]
+                start_index_list = start_index_list[0::sequence_length]
+
+                # 244 * 244 这里是固定的
+                inputs = inputs.view(-1, sequence_length, 3, 224, 224)
+                outputs_phase = model.forward(inputs)
+                video_feature_train = np.concatenate((video_feature_train, outputs_phase.cpu()), axis=0)
+
+                if(video_feature_train.shape[0] >= train_clip_each_video[video_processed_num]):
+                    # 如果符合判断条件，说明当前视频的所有clip处理完成，可以生成当前视频的预测结果
+
+                    img_path = data[3][0]
+                    # print("img_path: ", img_path)
+                    # print("start_index_list: ", start_index_list)
+                    video_name = os.path.split(os.path.split(img_path)[0])[1]
+
+                    
+                    video_feature_x = video_feature_train[: train_clip_each_video[video_processed_num]]
+                    np.save(os.path.join(save_dir, video_name + ".npy"), video_feature_x)
+
+                    # print("video_feature_x: ", video_feature_x.shape)
+
+                    video_feature_train = video_feature_train[train_clip_each_video[video_processed_num] :]
+                    video_processed_num = video_processed_num + 1
+
+                    # print("第{}个视频特征处理完成，采样率为：{}".format(video_processed_num, opt.sample_rate))
+
+
+                progress_bar.update(len(outputs_phase.data))
+            print("train part success!!")
+
+    with torch.no_grad():
+        with tqdm(total=len(test_dataset), desc="extract test feature", unit="batch") as progress_bar:
+            video_feature_test = np.zeros(shape=(0, 512))
+            test_num_each_video = test_dataset.get_num_each_video()
+            test_clip_each_video = [x - sequence_length + 1 for x in test_num_each_video]
+
+            # 记录当前处理的视频数
+            video_processed_num = 0
+
+            test_loader_epoch = 0
+
+            for data in test_loader:
+                test_loader_epoch = test_loader_epoch + 1
+                inputs = data[0].to(device)
+
+                start_index_list = data[2]
+                start_index_list = start_index_list[0::sequence_length]
+
+                # 244 * 244 这里是固定的
+                inputs = inputs.view(-1, sequence_length, 3, 224, 224)
+                outputs_phase = model.forward(inputs)
+                video_feature_test = np.concatenate((video_feature_test, outputs_phase.cpu()), axis=0)
+
+                if(video_feature_test.shape[0] >= test_clip_each_video[video_processed_num]):
+                    # 如果符合判断条件，说明当前视频的所有clip处理完成，可以生成当前视频的预测结果
+                    img_path = data[3][0]
+                    video_name = os.path.split(os.path.split(img_path)[0])[1]
+
+                    video_feature_x = video_feature_test[: test_clip_each_video[video_processed_num]]
+                    np.save(os.path.join(save_dir, video_name + ".npy"), video_feature_x)
+
+                    video_feature_test = video_feature_test[test_clip_each_video[video_processed_num] :]
+                    video_processed_num = video_processed_num + 1
+
+                    # print("第{}个视频特征处理完成，采样率为：{}".format(video_processed_num, opt.sample_rate))
+                progress_bar.update(len(outputs_phase.data))
+            print("test part success!!")
 
 if __name__ == "__main__":
     """

@@ -106,6 +106,9 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
 
                 start_index_list = data[2]
                 start_index_list = start_index_list[0::sequence_length]
+
+                # print("start_index_list[0]: ", start_index_list[0])
+                # print("labels_phase: ", labels_phase[0])
                 long_feature = get_long_feature(opt,
                                                 start_index_list=start_index_list,
                                                 dict_start_idx_LFB=dict_train_start_idx_LFB,
@@ -150,7 +153,7 @@ def test(opt, model, test_dataset, device):
 
     model.to(device)
     model.eval()
-    test_loader = dataset_propre(opt, test_dataset)
+    test_loader = dataset_propre(opt, test_dataset )
     dict_val_start_idx_LFB = get_dict_start_idx_LFB(sequence_length, test_dataset)
 
     with open(opt.val_feature_path, 'rb') as f:
@@ -214,7 +217,7 @@ def evaluate_and_visualize(opt, model, test_dataset, device):
             
             # 获取每个视频的图片数，然后减去序列长度，得到每个视频的视频片段数
             test_num_each_video = test_dataset.get_num_each_video()
-            test_clip_each_video = [x - sequence_length for x in test_num_each_video]
+            test_clip_each_video = [x - sequence_length + 1 for x in test_num_each_video]
 
             # 记录当前处理的视频数
             video_processed_num = 0
@@ -235,14 +238,11 @@ def evaluate_and_visualize(opt, model, test_dataset, device):
                 inputs = inputs.view(-1, sequence_length, 3, 224, 224)
                 outputs_phase = model.forward(inputs, long_feature=long_feature)
 
-
                 _, preds_phase = torch.max(outputs_phase.data, 1)
                 """
                 把 preds_phase 按照视频的帧数拼接，然后保存到一个txt文件里面
                 同时生成和 ground_turth 的对比图片，下面带上这个图片的正确率
                 """
-                # visualize_predictions_and_ground_truth(preds_phase_v, labels_phase_v, acc, video_num, opt.model_name, save_dir='./result/visualization/')
-
                 all_pred_phase.extend(preds_phase.tolist())
                 all_label_phase.extend(labels_phase.tolist())
 
