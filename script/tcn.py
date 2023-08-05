@@ -35,7 +35,10 @@ def get_long_feature(start_index, lfb, LFB_length):
     long_feature.append(long_feature_each)
     return long_feature
 
-def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/tcn", debug = True):
+def train_frame_wise(opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/tcn", debug = True):
+    """
+    这个函数处理的特征是逐帧的特征，所有视频的特征都存在一个文件里
+    """
     """
     数据处理的流程：
         1. 把整个视频输入到模型里面，前向传递，然后预测正确率
@@ -147,7 +150,7 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
         保存当前最优秀的模型
         """
         if debug:
-            acc = test(opt, model, test_dataset, device)
+            acc = test_frame_wise(opt, model, test_dataset, device)
             if(acc > best_accuracy):
                 best_epoch = epoch
                 best_accuracy = acc
@@ -155,7 +158,7 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
         
     print("train success!")
 
-def test(opt, model, test_dataset, device):
+def test_frame_wise(opt, model, test_dataset, device):
     model.to(device)
     model.eval()
 
@@ -201,7 +204,83 @@ def test(opt, model, test_dataset, device):
     acc = correct / total
     return acc
 
+def train_video(opt, model, train_loader, test_loader, device, save_dir = "./result/model/tcn_video", debug = True):
+    """
+    0. 
+    """
+    model.to(device)
+    weights_train = np.asarray([1.6411019141231247,
+            0.19090963801041133,
+            1.0,
+            0.2502662616859295,
+            1.9176363911137977,
+            0.9840248158200853,
+            2.174635818337618,])
+    criterion_phase = nn.CrossEntropyLoss(weight=torch.from_numpy(weights_train).float().to(device))
+    optimizer = optim.Adam(model.parameters(), lr=opt.learning_rate, weight_decay=1e-5)
 
+    best_accuracy = 0.0
+    best_epoch = 0
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    for epoch in range(opt.epoch):
+        model.train()
+        total = 0
+        train_loss_phase = 0.0
+        train_corrects_phase = 0
+        running_loss_phase = 0.0
+
+        for (video, labels, video_name) in tqdm(train_loader):
+            labels = torch.Tensor(labels).long()        
+            video, labels = video.to(device), labels.to(device) 
+
+            video_fe = video.transpose(2, 1)
+            outputs_phase = model.forward(video_fe)
+            print("outputs_phase.shape: ", outputs_phase.shape)
+            stages = outputs_phase.shape[0]
+
+            clc_loss = 0
+            for j in range(stages):  ### make the interuption free stronge the more layers.
+                p_classes = []
+                p_classes = outputs_phase[j].squeeze().transpose(1, 0)
+                ce_loss = criterion_phase(p_classes, labels)
+                clc_loss += ce_loss
+            clc_loss = clc_loss / (stages * 1.0)
+
+            _, preds_phase = torch.max(outputs_phase[stages-1].squeeze().transpose(1, 0).data, 1)
+
+            loss = clc_loss
+            # print(loss)
+            loss.backward()
+            optimizer.step()
+
+            running_loss_phase += clc_loss.data.item()
+            train_loss_phase += clc_loss.data.item()
+
+            batch_corrects_phase = torch.sum(preds_phase == labels.data)
+            train_corrects_phase += batch_corrects_phase
+            total += len(labels.data)
+
+        epoch_acc = train_corrects_phase / total
+        epoch_loss = train_loss_phase / total
+        print('Train Epoch {}: Acc {}, Loss {}'.format(epoch, epoch_acc, epoch_loss))
+
+        """
+        保存当前最优秀的模型
+        """
+        if debug:
+            acc = test_frame_wise(opt, model, test_loader, device)
+            if(acc > best_accuracy):
+                best_epoch = epoch
+                best_accuracy = acc
+                torch.save(model.state_dict(), save_dir + '/{}-{}.model'.format(best_epoch, round(best_accuracy.item(), 4)))
+        
+    print("train success!")
+
+def test_frame_wise(opt, model, test_loader, device):
+    print("test")
 
 def extract():
     """

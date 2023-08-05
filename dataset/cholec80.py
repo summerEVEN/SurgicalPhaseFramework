@@ -271,15 +271,20 @@ class TestVideoDataset(Dataset):
         num_len = 0
         ans = 0
 
-        print("--------------", video_feature_folder)
-
         for v_f in os.listdir(video_feature_folder):  
+
             v_f_abs_path = os.path.join(video_feature_folder, v_f)
             v_label_file_abs_path = os.path.join(label_folder, v_f.split('.')[0] + '.txt')
             labels = self.read_labels(v_label_file_abs_path) 
+
             labels = labels[::sample_rate]
+            
             videos = np.load(v_f_abs_path)[::sample_rate,]
             num_len += videos.shape[0]
+
+            # print("video_name: ", v_f)
+            # print("len(labels): ", len(labels))
+            # print("len(videos): ", len(videos))
             self.videos.append(videos)
             self.labels.append(labels)
             phase = 1

@@ -104,9 +104,6 @@ def hierarch_train(opt, model, train_loader, validation_loader, device, save_dir
 
         print('Train Epoch {}: Acc {}, Loss {}, ms {}'.format(epoch, correct / total, loss_item /total,  ms_item/total))
         if debug:
-            # ！！！！这又是什么参数，有什么神奇的作用？？？
-            # 大概就是，
-            # save_dir
             test_acc, predicted, out_pro, test_video_name=hierarch_test(opt, model, validation_loader, device)
             if test_acc > best_acc:
                 best_acc = test_acc

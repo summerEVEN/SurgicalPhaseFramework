@@ -54,7 +54,7 @@ def cuda_test():
     还有一些问题，需要判断GPU是否被占用（使用 is_avaliable()　函数判断不可行）
     """
     if torch.cuda.is_available():
-        device = torch.device("cuda:1")
+        device = torch.device("cuda:0")
         print("GPU可用")
         return device
     else:
@@ -63,7 +63,6 @@ def cuda_test():
         return False
 
 def run():
-
     # 这里还有点问题，cuda_test函数存在点问题
     device = cuda_test()
     if device == False:
@@ -72,6 +71,7 @@ def run():
 
     model_name = opt.model_name
     action = args.action
+
     if action == 'train':
         if model_name == "resnet50":
             # 加载 测试的数据集 和 训练的数据集
@@ -113,6 +113,28 @@ def run():
             import script.tcn as tcn_action
 
             tcn_action.train(opt, model, train_dataset, test_dataset, device)
+            # (opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/resnet_lstm")
+
+        if model_name == "tcn_video":
+            """
+            从tcn的参数来看，out_features = 7 应该是和阶段的类别数相关
+            
+            """
+            # 加载 测试的数据集 和 训练的数据集
+            # train_path = os.path.join(os.getcwd(), "./result/resnet50", "train_dataset")
+            # test_path = os.path.join(os.getcwd(), "./result/resnet50", "test_dataset")
+
+            video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path + '/train_dataset', 1, 'video_feature_resnet50')
+            video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
+            video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path + '/test_dataset', 1, 'video_feature_resnet50')
+            video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
+
+
+            import model.predictor.tcn as tcn_model
+            model = tcn_model.MultiStageModel(opt)
+            import script.tcn as tcn_action
+
+            tcn_action.train_video(opt, model, video_train_dataloader, video_test_dataloader, device)
             # (opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/resnet_lstm")
 
         if model_name == "TMR":
@@ -190,6 +212,13 @@ def run():
             num_layers_R = opt.num_layers_R
             num_R = opt.num_R
 
+            # 这个路径下是 从官方下载的数据集
+            # video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/train_dataset', sample_rate, 'video_feature')
+            # video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
+            # video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/test_dataset', test_sample_rate, 'video_feature')
+            # video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
+
+            # 这个路径下是 自己参考论文复现的数据集
             video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/train_dataset', sample_rate, 'video_feature')
             video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
             video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/test_dataset', test_sample_rate, 'video_feature')
@@ -257,6 +286,19 @@ def run():
         （之前在运行 NETE 还是 SAHC 项目的时候，如果 predict 阶段和 refinement 阶段的采样率不同，会出现错误）
         （具体什么错误忘记了，）
         """
+
+        if model_name == "resnet50":
+            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
+
+            import model.predictor.resnet50 as resnet50
+            import script.resnet50 as resnet50_model
+            model = resnet50.resnet_feature()
+            resnet50_model.extract_video(opt, model, train_dataset, test_dataset, device, save_dir = "../../Dataset/SAHC/even/")
+            
+
         if model_name == "resnet_lstm":
             train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
             train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
@@ -267,10 +309,6 @@ def run():
             import script.resnet_lstm as resnet_lstm_model
             model = resnet_lstm.resnet_lstm_feature(opt)
             resnet_lstm_model.extract_video(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature_video/resnet_lstm")
-            print("TODO")
-
-        if model_name == "resnet50":
-            print("TODO")
 
 if __name__ == '__main__':  
     seed_everything()      

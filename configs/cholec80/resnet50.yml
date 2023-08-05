@@ -4,4 +4,4 @@ batch_size: 400
 epoch: 3
 sequence_length: 4
 workers: 4
-model_path: ./result/model/resnet50/2-0.8079.model
+eval_model_path: ./result/model/resnet50/2-0.8079.model
