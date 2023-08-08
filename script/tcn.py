@@ -234,8 +234,9 @@ def train_video(opt, model, train_loader, test_loader, device, save_dir = "./res
 
         for (video, labels, video_name) in tqdm(train_loader):
             labels = torch.Tensor(labels).long()        
-            video, labels = video.to(device), labels.to(device) 
+            video, labels = video.float().to(device), labels.to(device) 
 
+            print("video.shape: ", video[0][0].shape, video[0][0].data)
             video_fe = video.transpose(2, 1)
             outputs_phase = model.forward(video_fe)
             print("outputs_phase.shape: ", outputs_phase.shape)
@@ -245,6 +246,8 @@ def train_video(opt, model, train_loader, test_loader, device, save_dir = "./res
             for j in range(stages):  ### make the interuption free stronge the more layers.
                 p_classes = []
                 p_classes = outputs_phase[j].squeeze().transpose(1, 0)
+                print("-----------------")
+                print(p_classes.size, labels.size)
                 ce_loss = criterion_phase(p_classes, labels)
                 clc_loss += ce_loss
             clc_loss = clc_loss / (stages * 1.0)

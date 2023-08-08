@@ -4,7 +4,7 @@ out_features: 7
 num_workers: 3
 batch_size: 1
 mstcn_causal_conv: True
-learning_rate: 1e-3
+learning_rate: 0.001
 min_epochs: 12
 max_epochs: 25
 mstcn_layers: 8
@@ -19,7 +19,7 @@ val_feature_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/fea
 
 tcn_model_path: 
 
-# 为了防止我忘记这个网络是干什么的，在这里简单记录一下
+# 为了防止忘记这个网络的数据处理方法，在这里简单记录一下
 # 它是使用 transformer，同时利用了 时间 和 空间 信息
 # 所以需要给出 空间信息（resnet50 的特征）的 path
 # 还要给出 时间信息(TCN) 的模型路径, 这里的时间信息不是提前生成的

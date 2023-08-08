@@ -1,9 +1,8 @@
 model_name: SAHC
 eval_model_path: ./result/model/cholec80/Hierarch_TCN2/hierTrue_mslossTrue_transTrue/best_58.model
 
+# 这个配置文件里面的参数，目前只是照搬了 https://github.com/xmed-lab/SAHC 里面的参数，还没有完全理解里面
 dataset: cholec80
-# dataset_path: ../../Dataset/SAHC/cholec80
-# dataset目前还需要根据NETE生成一下
 dataset_path: ../../Dataset/SAHC/cholec80
 sample_rate: 5
 test_sample_rate: 5
@@ -34,4 +33,4 @@ num_R: 3
 head_num: 8
 embed_num: 512
 block_num: 1
-positional_encoding_type: learned  #, type=str, help=fixed or learned
+positional_encoding_type: learned  # type=str, help=fixed or learned

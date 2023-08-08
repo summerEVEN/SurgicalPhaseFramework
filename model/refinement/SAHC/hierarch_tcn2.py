@@ -34,7 +34,7 @@ class FPN(nn.Module):
         # return F.upsample(x, size=W, mode='linear') + y
         """ 
         nn.functional. upsample is deprecated.  Use nn.functional.interpolate instead.
-        upsamlpe 函数已经弃用，改成了interpolate函数，正确率上来了一点点，感觉模型很震荡
+        upsamlpe 函数已经弃用，改成了interpolate函数
         """
         return F.interpolate(x, size=W, mode='linear') + y
 
@@ -312,7 +312,6 @@ class DilatedResidualCausalLayer(nn.Module):
     def __init__(self, dilation, in_channels, out_channels, padding=None):
         super(DilatedResidualCausalLayer, self).__init__()
         if padding == None:
-            
             self.padding = 2 * dilation
         else:
             self.padding=padding

@@ -5,10 +5,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import copy
 
-"""
-关于这个TCN的结构,需要进一步梳理,然后给出注释???
-"""
-
 class MultiStageModel(nn.Module):
     def __init__(self, opt):
         self.num_stages = opt.mstcn_stages  # 2

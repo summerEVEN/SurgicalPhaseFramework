@@ -8,7 +8,6 @@ workers: 4
 # 数据集的路径
 dataset_path: ../../Dataset/SAHC/even
 
-# 这里是尝试复现 SAHC 的参数配置
 out_features: 7  
 mstcn_causal_conv: True
 mstcn_layers: 12
@@ -18,7 +17,4 @@ mstcn_stages: 3
 
 train_feature_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/feature/resnet50/resnet50_train.pkl
 test_feature_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/feature/resnet50/resnet50_test.pkl
-# model_path: ./SurgicalPhaseFramework/result/model/resnet50/2-0.8079.model
-
-# 用于验证或者提取模型特征的 模型参数 的路径
 eval_model_path: ./SurgicalPhaseFramework/result/model/resnet50/2-0.8079.model

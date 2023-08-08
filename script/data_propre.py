@@ -17,7 +17,7 @@ __all__ = ["dataset_propre", "get_useful_start_idx", "get_dict_start_idx_LFB"]
 def get_useful_start_idx(sequence_length, list_each_length):
     """
     获取每个视频起始的图片id
-    通过这个id, 可以快速在 dataset 里面，找到当前视频的每个视频片段的起始图片id
+    通过这个id, 可以在 dataset 里面，找到当前视频的每个视频片段的起始图片id
     """
     count = 0
     idx = []

@@ -269,5 +269,3 @@ def _get_activation_fn(activation):
     if activation == "glu":
         return F.glu
     raise RuntimeError(F"activation should be relu/gelu/glu, not {activation}.")
-# !!! 这好像是一种比较新的报错东西，真好！这种东西感觉很有用，试试
-# 使用raise可以在程序中手动设置异常

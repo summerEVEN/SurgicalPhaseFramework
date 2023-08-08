@@ -1,16 +1,19 @@
 """
 这里是使用 resnet_lstm 网络进行训练，测试，验证，生成特征的几个函数的集合
-使用这个网络的时候，数据需要进行特殊的处理，所以先尝试着写一下。
 
 关于数据的处理:
-这里牵扯到一个 batch_size 和 length 的关系（提前验证可以及时修改参数）
+这里牵扯到一个 batch_size 和 length 的关系：
+batch_size 必须是 length 的倍数
+（如果添加提前验证的代码，可以在训练前就结束运行及时修改参数）
 
 """
 
 """
-关于 tqdm 手动更新进度条存在一点点的小误差，由于视频的 sequence_length 引起的，暂时不去管吧hhh
-
+关于 tqdm 手动更新进度条存在一点点的小误差，
+由于视频的 sequence_length 引起的，暂时不管
+后面找找更加方便的实现方法
 """
+
 import os
 import utils.labels
 import numpy as np
@@ -37,28 +40,6 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
     3. 模型验证 （保存训练的数值）
     4. 保存最优模型的参数
     """
-    # sequence_length = opt.sequence_length
-    # # 获取测试集每个视频包含的图片数的list
-    # train_num_each = train_dataset.num_each_video()
-    # train_useful_start_idx = get_useful_start_idx(sequence_length, train_num_each)
-    # # 训练集中有效的视频片段数量
-    # train_slice_num = len(train_useful_start_idx)
-    # np.random.shuffle(train_useful_start_idx)
-    # train_idx_80 = []
-    # for i in range(train_slice_num):
-    #     for j in range(sequence_length):
-    #         train_idx_80.append(train_useful_start_idx[i] + j)
-
-    # train_loader_80 = DataLoader(
-    #     train_dataset,
-    #     batch_size=opt.batch_size,
-    #     sampler=SeqSampler(train_dataset, train_idx_80),
-    #     num_workers=opt.workers,
-    #     pin_memory=False
-    # )
-
-    ######################## 训练集的数据id处理完成
-
     model.to(device)
 
     if not os.path.exists(save_dir):
@@ -68,6 +49,7 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
 
     learning_rate = opt.learning_rate
     sequence_length = opt.sequence_length
+    epochs = opt.epoch
 
     optimizer = optim.Adam([
         {'params': model.share.parameters()},
@@ -75,22 +57,19 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
         {'params': model.fc.parameters(), 'lr': learning_rate},
     ], lr=learning_rate / 10.0, weight_decay=1e-5)
 
-    best_model_wts = copy.deepcopy(model.state_dict())
+
     best_accuracy = 0.0
-    correspond_train_acc_phase = 0.0
     best_epoch = 0
 
-    epochs = opt.epoch
     for epoch in range(epochs):
-        with tqdm(total=len(train_dataset), desc=f"Epoch {epoch+1}", unit="batch") as progress_bar:
+        with tqdm(total=len(train_dataset), desc=f"train epoch {epoch+1}", unit="batch") as progress_bar:
             train_loader = dataset_propre(opt, train_dataset, True)
             model.train()
+
             train_loss_phase = 0.0
             train_corrects_phase = 0
             total = 0
-            batch_progress = 0.0
             running_loss_phase = 0.0
-            train_start_time = time.time()
 
             for i, data in enumerate(train_loader):
                 inputs, labels_phase = data[0].to(device), data[1].to(device)
@@ -99,10 +78,6 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
 
                 inputs = inputs.view(-1, sequence_length, 3, 224, 224)
                 outputs_phase = model.forward(inputs)
-                # outputs_phase = outputs_phase[sequence_length - 1::sequence_length]
-
-                # print(outputs_phase.shape)
-                # print(labels_phase.shape)
 
                 _, preds_phase = torch.max(outputs_phase.data, 1)
                 loss_phase = criterion_phase(outputs_phase, labels_phase)
@@ -117,13 +92,9 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
                 batch_corrects_phase = torch.sum(preds_phase == labels_phase.data)
                 train_corrects_phase += batch_corrects_phase
 
-                # print(type(labels_phase.data))
-                # print(len(labels_phase.data))
                 total += len(labels_phase.data)
-                # ------------- len(这里可能有问题)
 
                 progress_bar.update(len(labels_phase.data))
-                # progress_bar.set_postfix({'Loss': loss_phase.data.item()})
 
         epoch_acc = train_corrects_phase / total
         epoch_loss = train_loss_phase / total
@@ -142,9 +113,6 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
     print("train success!")
 
 def test(opt, model, test_dataset, device, dir_res="./result/label/resnet_lstm"):
-    """
-    resnet_lstm
-    """
     sequence_length = opt.sequence_length
 
     model.to(device)
@@ -152,17 +120,15 @@ def test(opt, model, test_dataset, device, dir_res="./result/label/resnet_lstm")
     test_loader = dataset_propre(opt, test_dataset)
     
     with torch.no_grad():
-
         correct = 0
         total = 0
-        # process_bar = tqdm(total=len(test_dataset), desc=f"test_progress", unit="batch")
+
         with tqdm(total=len(test_dataset), desc="test", unit="batch") as progress_bar:
             for data in test_loader:
                 inputs, labels_phase = data[0].to(device), data[1].to(device)
                 labels_phase = labels_phase[(sequence_length - 1)::sequence_length]
                 inputs = inputs.view(-1, sequence_length, 3, 224, 224)
                 outputs_phase = model.forward(inputs)
-                # outputs_phase = outputs_phase[sequence_length - 1::sequence_length]
 
                 _, preds_phase = torch.max(outputs_phase.data, 1)
 
@@ -179,39 +145,36 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
     """
     使用 resnet_lstm 网络提取视频特征
     """
-    # import model.predictor.resnet_lstm as resnet_lstm
-    # model = resnet_lstm.resnet_lstm_feature(opt)
 
     model.load_state_dict(torch.load(opt.model_path), strict=False)
     model.to(device)
     model.eval()
 
-    print("-----------开始运行------------")
+    print("-----------extract------------")
 
     train_loader = dataset_propre(opt, train_dataset)
     test_loader = dataset_propre(opt, test_dataset)
 
     # Long Term Feature bank
+    # 这里的 512 和模型的输出特征大小保持一致
     g_LFB_train = np.zeros(shape=(0, 512))
     g_LFB_val = np.zeros(shape=(0, 512))
 
     with torch.no_grad():
         with tqdm(total=len(train_dataset), desc="train", unit="batch") as progress_bar:
             for data in train_loader:
-                inputs, labels_phase = data[0].to(device), data[1].to(device)
+                inputs = data[0].to(device)
 
                 inputs = inputs.view(-1, opt.sequence_length, 3, 224, 224)
                 outputs_feature = model.forward(inputs)
                 g_LFB_train = np.concatenate((g_LFB_train, outputs_feature),axis=0)
 
                 progress_bar.update(len(outputs_feature))
-
-            progress_bar.close()
-            
+            progress_bar.close()       
 
         with tqdm(total=len(test_dataset), desc="test", unit="batch") as progress_bar:
             for data in test_loader:
-                inputs, labels_phase = data[0].to(device), data[1].to(device)
+                inputs = data[0].to(device)
 
                 inputs = inputs.view(-1, opt.sequence_length, 3, 224, 224)
                 outputs_feature = model.forward(inputs)
@@ -238,7 +201,6 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
     with open(os.path.join(save_dir, "g_LFB_test_st.pkl"), 'wb') as f:
         pickle.dump(g_LFB_val, f)
 
-# def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature/resnet_lstm"):
 def extract_video(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature_video/resnet_lstm"):
 
     sequence_length = opt.sequence_length
@@ -262,15 +224,10 @@ def extract_video(opt, model, train_dataset, test_dataset, device, save_dir = ".
 
             # print("train_clip_each_video : ", train_clip_each_video )
 
-            # 记录当前处理的视频数
+            # 记录当前已经处理到第几个视频了
             video_processed_num = 0
 
-            # print("train_loader: ", len(train_loader))
-
-            train_loader_epoch = 0
-
             for data in train_loader:
-                train_loader_epoch = train_loader_epoch + 1
                 inputs = data[0].to(device)
 
                 start_index_list = data[2]
@@ -310,19 +267,14 @@ def extract_video(opt, model, train_dataset, test_dataset, device, save_dir = ".
             test_num_each_video = test_dataset.get_num_each_video()
             test_clip_each_video = [x - sequence_length + 1 for x in test_num_each_video]
 
-            # 记录当前处理的视频数
             video_processed_num = 0
 
-            test_loader_epoch = 0
-
             for data in test_loader:
-                test_loader_epoch = test_loader_epoch + 1
                 inputs = data[0].to(device)
 
                 start_index_list = data[2]
                 start_index_list = start_index_list[0::sequence_length]
 
-                # 244 * 244 这里是固定的
                 inputs = inputs.view(-1, sequence_length, 3, 224, 224)
                 outputs_phase = model.forward(inputs)
                 video_feature_test = np.concatenate((video_feature_test, outputs_phase.cpu()), axis=0)
@@ -337,8 +289,6 @@ def extract_video(opt, model, train_dataset, test_dataset, device, save_dir = ".
 
                     video_feature_test = video_feature_test[test_clip_each_video[video_processed_num] :]
                     video_processed_num = video_processed_num + 1
-
-                    # print("第{}个视频特征处理完成，采样率为：{}".format(video_processed_num, opt.sample_rate))
                 progress_bar.update(len(outputs_phase.data))
             print("test part success!!")
 

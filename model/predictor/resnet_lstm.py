@@ -8,9 +8,7 @@ class resnet_lstm(torch.nn.Module):
     def __init__(self, opt):
         """
         Args:
-            opt: opt 参数包含配置文件和配置文件脚本（./utils/opts.py）里面的所有参数
-            担心这样传参会不会非常臃肿（但是我懒得写函数的接口了）
-            
+            opt: opt 参数包含配置文件和配置文件脚本（./utils/opts.py）里面的所有参数            
         """
         super(resnet_lstm, self).__init__()
         resnet = models.resnet50(weights = models.ResNet50_Weights.DEFAULT)
@@ -53,7 +51,7 @@ class resnet_lstm_feature(torch.nn.Module):
 
     这个是用于提取特征，最后的输出是大小为 512 的特征 
     （不需要训练，直接加载使用上面的网络结构训练好的参数即可）
-    （关于 512 这个数值，这里是把它固定了，但是其他的特征提取网络得到的特征大小不是 512）
+    （关于 512 这个数值，这里是把它设置为固定值，但是其他的特征提取网络输出的特征大小不一定是 512）
     （可能也需要添加一个参数加入到 opt.py 里？？）
     """
     def __init__(self, opt):

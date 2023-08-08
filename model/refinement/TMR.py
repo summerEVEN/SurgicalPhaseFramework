@@ -54,7 +54,6 @@ class resnet_lstm(torch.nn.Module):
         y = F.relu(y)
         y = self.fc_c(y)
 
-        # y = y[self.sequence_length - 1::self.sequence_length]
         return y
     
 
