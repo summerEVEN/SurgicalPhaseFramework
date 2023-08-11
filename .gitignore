@@ -15,3 +15,5 @@
 *.cpython-39.pyc
 
 *.py[cod]
+
+.vscode

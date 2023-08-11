@@ -3,22 +3,23 @@ import numpy as np
 import torch.nn as nn
 
 class Transformer(nn.Module):
-    def __init__(self, opt, mstcn_f_maps, mstcn_f_dim, out_features, len_q):
+    # def __init__(self, opt, mstcn_f_maps, mstcn_f_dim, out_features, len_q):
+    def __init__(self, opt):
         super(Transformer, self).__init__()
-        self.num_f_maps = mstcn_f_maps  # 32
-        self.dim = mstcn_f_dim  # 2048
-        self.num_classes = out_features  # 7
-        self.len_q = len_q
+        self.num_f_maps = opt.mstcn_f_maps  # 32
+        self.dim = opt.mstcn_f_dim  # 2048
+        self.num_classes = opt.out_features  # 7
+        self.len_q = opt.len_q
 
         self.transformer = Transformer2_3_1(
-            d_model=out_features, 
-            d_ff=mstcn_f_maps, 
-            d_k=mstcn_f_maps,
-            d_v=mstcn_f_maps, 
+            d_model = opt.out_features, 
+            d_ff = opt.mstcn_f_maps, 
+            d_k = opt.mstcn_f_maps,
+            d_v = opt.mstcn_f_maps, 
             n_layers=1, 
             n_heads=8, 
             len_q = opt.sequence_length)
-        self.fc = nn.Linear(mstcn_f_dim, out_features, bias=False)
+        self.fc = nn.Linear(opt.mstcn_f_dim, opt.out_features, bias=False)
 
 
     def forward(self, x, long_feature):

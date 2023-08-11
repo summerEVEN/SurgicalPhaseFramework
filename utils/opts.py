@@ -33,7 +33,7 @@ def parse_opt():
     parser.add_argument('--sequence_length', type=int, default=4, help="视频片段的长度")
     parser.add_argument('--learning_rate', type=float, default=1e-4, help="学习率")
     parser.add_argument('--workers', type=int, default=4, help="^")
-    parser.add_argument('--model_path', type=str, help="模型的路径")
+    parser.add_argument('--eval_model_path', type=str, help="需要验证的模型的路径")
 
     parser.add_argument('--train_feature_path', type=str, default=None, help="训练集的特征")
     parser.add_argument('--test_faeture_path', type=str, default=None, help="测试集的特征文件")

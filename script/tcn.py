@@ -5,15 +5,13 @@
 """
 
 import os
-import utils.labels
 import numpy as np
 import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import Sampler
-from script.data_propre import dataset_propre
-from utils.tensorboard_log import writer_log
+from utils.ribbon import visualize_predictions_and_ground_truth
 
 import copy
 import time
@@ -57,8 +55,6 @@ def train_frame_wise(opt, model, train_dataset, test_dataset, device, save_dir =
             2.174635818337618,])
     criterion_phase = nn.CrossEntropyLoss(weight=torch.from_numpy(weights_train).float().to(device))
     optimizer = optim.Adam(model.parameters(), lr=opt.learning_rate, weight_decay=1e-5)
-
-    sequence_length = opt.sequence_length
 
     with open(opt.train_feature_path, 'rb') as f:
         g_LFB_train = pickle.load(f)
@@ -205,9 +201,6 @@ def test_frame_wise(opt, model, test_dataset, device):
     return acc
 
 def train_video(opt, model, train_loader, test_loader, device, save_dir = "./result/model/tcn_video", debug = True):
-    """
-    0. 
-    """
     model.to(device)
     weights_train = np.asarray([1.6411019141231247,
             0.19090963801041133,
@@ -236,18 +229,18 @@ def train_video(opt, model, train_loader, test_loader, device, save_dir = "./res
             labels = torch.Tensor(labels).long()        
             video, labels = video.float().to(device), labels.to(device) 
 
-            print("video.shape: ", video[0][0].shape, video[0][0].data)
+            # print("video.shape: ", video[0][0].shape, video[0][0].data)
             video_fe = video.transpose(2, 1)
             outputs_phase = model.forward(video_fe)
-            print("outputs_phase.shape: ", outputs_phase.shape)
+            # print("outputs_phase.shape: ", outputs_phase.shape)
             stages = outputs_phase.shape[0]
 
             clc_loss = 0
             for j in range(stages):  ### make the interuption free stronge the more layers.
                 p_classes = []
                 p_classes = outputs_phase[j].squeeze().transpose(1, 0)
-                print("-----------------")
-                print(p_classes.size, labels.size)
+                # print("-----------------")
+                # print(p_classes.shape, labels.size)
                 ce_loss = criterion_phase(p_classes, labels)
                 clc_loss += ce_loss
             clc_loss = clc_loss / (stages * 1.0)
@@ -255,7 +248,6 @@ def train_video(opt, model, train_loader, test_loader, device, save_dir = "./res
             _, preds_phase = torch.max(outputs_phase[stages-1].squeeze().transpose(1, 0).data, 1)
 
             loss = clc_loss
-            # print(loss)
             loss.backward()
             optimizer.step()
 
@@ -274,7 +266,7 @@ def train_video(opt, model, train_loader, test_loader, device, save_dir = "./res
         保存当前最优秀的模型
         """
         if debug:
-            acc = test_frame_wise(opt, model, test_loader, device)
+            acc = test_video(opt, model, test_loader, device)
             if(acc > best_accuracy):
                 best_epoch = epoch
                 best_accuracy = acc
@@ -282,8 +274,113 @@ def train_video(opt, model, train_loader, test_loader, device, save_dir = "./res
         
     print("train success!")
 
-def test_frame_wise(opt, model, test_loader, device):
-    print("test")
+def test_video(opt, model, test_loader, device):
+    model.to(device)
+    model.eval()
+
+    total = 0
+    test_corrects_phase = 0
+
+    for (video, labels, video_name) in tqdm(test_loader):
+        labels = torch.Tensor(labels).long()        
+        video, labels = video.float().to(device), labels.to(device) 
+
+        video_fe = video.transpose(2, 1)
+        outputs_phase = model.forward(video_fe)
+        stages = outputs_phase.shape[0]
+
+        _, preds_phase = torch.max(outputs_phase[stages-1].squeeze().transpose(1, 0).data, 1)
+
+        batch_corrects_phase = torch.sum(preds_phase == labels.data)
+        test_corrects_phase += batch_corrects_phase
+        total += len(labels.data)
+
+    epoch_acc = test_corrects_phase / total
+    print('test Acc {}'.format(epoch_acc))
+    return epoch_acc
+
+def frame_wise_visualization(opt, model, test_dataset, device):
+    model.load_state_dict(torch.load(opt.eval_model_path), strict=False)
+    model.to(device)
+    model.eval()
+
+    test_num_each_video = test_dataset.get_num_each_video()
+
+    with open(opt.test_feature_path, 'rb') as f:
+        g_LFB_val = pickle.load(f)
+
+    with torch.no_grad():
+        with tqdm(total=len(test_dataset), desc="test", unit="batch") as progress_bar:
+            correct = 0
+            total = 0
+            video_phase_count = 0
+            for i, video_num in enumerate(test_num_each_video):
+                
+                labels_phase = []
+                for j in range(video_phase_count, video_phase_count + video_num):
+                    labels_phase.append(test_dataset[j][1])
+                labels_phase = torch.LongTensor(np.array(labels_phase))
+                labels_phase = labels_phase.to(device)
+                
+                long_feature = get_long_feature(start_index=video_phase_count,
+                                        lfb=g_LFB_val, LFB_length=video_num)
+                long_feature = (torch.Tensor(long_feature)).to(device)
+                video_fe = long_feature.transpose(2, 1)
+
+                outputs_phase = model.forward(video_fe)
+                stages = outputs_phase.shape[0]
+
+                # _, preds_phase = torch.max(outputs_phase.data, 1)
+                _, preds_phase = torch.max(outputs_phase[stages-1].squeeze().transpose(1, 0).data, 1)
+
+                # print(preds_phase.is_cuda)
+                # print(labels_phase.is_cuda)
+
+                batch_correct = torch.sum(preds_phase == labels_phase.data)
+                correct += batch_correct
+                total += len(labels_phase.data)
+
+                img_path = test_dataset[video_phase_count][3]
+                video_name = os.path.split(os.path.split(img_path)[0])[1]
+
+                visualize_predictions_and_ground_truth(preds_phase, labels_phase, int(batch_correct.data)/len(labels_phase.data), 
+                                                       video_name, opt.model_name, save_dir='./result/visualization/')
+
+                progress_bar.update(video_num)
+                video_phase_count = video_phase_count + video_num
+        progress_bar.close()
+    print('Test: Acc {}'.format(correct / total))
+    acc = correct / total
+    return acc
+
+def video_visualization(opt, model, test_loader, device):
+    model.load_state_dict(torch.load(opt.eval_model_path), strict=False)
+    model.to(device)
+    model.eval()
+    total = 0
+    test_corrects_phase = 0
+
+    for (video, labels, video_name) in tqdm(test_loader):
+        labels = torch.Tensor(labels).long()        
+        video, labels = video.float().to(device), labels.to(device) 
+
+        video_fe = video.transpose(2, 1)
+        outputs_phase = model.forward(video_fe)
+        stages = outputs_phase.shape[0]
+
+        _, preds_phase = torch.max(outputs_phase[stages-1].squeeze().transpose(1, 0).data, 1)
+
+        batch_corrects_phase = torch.sum(preds_phase == labels.data)
+        test_corrects_phase += batch_corrects_phase
+        total += len(labels.data)
+
+        visualize_predictions_and_ground_truth(preds_phase, labels, int(batch_corrects_phase.data)/len(labels.data), 
+                                               video_name, opt.model_name, save_dir='./result/visualization/')
+
+    epoch_acc = test_corrects_phase / total
+    print('test Acc {}'.format(epoch_acc))
+    return epoch_acc
+
 
 def extract():
     """

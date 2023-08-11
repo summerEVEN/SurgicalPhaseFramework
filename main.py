@@ -50,7 +50,7 @@ def seed_everything(seed=123): # original one is 123, 3407
 
 def cuda_test():
     """
-    如果GPU可用，就使用GPU，如果没有空闲GPU，就啥也不干
+    如果GPU可用，就使用GPU，如果没有空闲GPU，就不运行程序
     还有一些问题，需要判断GPU是否被占用（使用 is_avaliable()　函数判断不可行）
     """
     if torch.cuda.is_available():
@@ -112,8 +112,7 @@ def run():
             model = tcn_model.MultiStageModel(opt)
             import script.tcn as tcn_action
 
-            tcn_action.train(opt, model, train_dataset, test_dataset, device)
-            # (opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/resnet_lstm")
+            tcn_action.train_frame_wise(opt, model, train_dataset, test_dataset, device)
 
         if model_name == "tcn_video":
             """
@@ -128,7 +127,6 @@ def run():
             video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
             video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path + '/test_dataset', 1, 'video_feature_resnet50')
             video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
-
 
             import model.predictor.tcn as tcn_model
             model = tcn_model.MultiStageModel(opt)
@@ -147,6 +145,18 @@ def run():
             import script.TMR as train
             import model.refinement.TMR as TMR_model
             model = TMR_model.resnet_lstm(opt)
+            train.train(opt, model, train_dataset, test_dataset, device)
+
+        if model_name == "trans_svnet":
+            # 加载 测试的数据集 和 训练的数据集
+            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
+
+            import script.trans_svnet as train
+            import model.refinement.trans_svnet as trans_svnet
+            model = trans_svnet.Transformer(opt)
             train.train(opt, model, train_dataset, test_dataset, device)
         
         if model_name == "SAHC":
@@ -192,6 +202,36 @@ def run():
         （重点是在线识别！！！）
         （在线使用 predictor 模型把
         """
+        if model_name == "tcn_video":
+
+            
+            import model.predictor.tcn as tcn_model
+            model = tcn_model.MultiStageModel(opt)
+            from script.tcn import video_visualization
+
+            video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path + '/train_dataset', 1, 'video_feature_resnet50')
+            video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
+            video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path + '/test_dataset', 1, 'video_feature_resnet50')
+            video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
+
+
+            video_visualization(opt, model, video_test_dataloader, device)
+
+        if model_name == "tcn":
+
+            
+            import model.predictor.tcn as tcn_model
+            model = tcn_model.MultiStageModel(opt)
+            from script.tcn import frame_wise_visualization
+
+            train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
+            train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
+            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
+
+            frame_wise_visualization(opt, model, test_dataset, device)
+
+
         if model_name == "SAHC":
             from script.SAHC import evaluate_and_visualize
             from model.refinement.SAHC.hierarch_tcn2 import Hierarch_TCN2

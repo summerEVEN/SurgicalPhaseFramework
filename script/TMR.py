@@ -43,14 +43,14 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
     1. 实例化模型，加载前面训练好的 resnet_lstm 模型的参数
     2. 正常训练
     """
-    model.load_state_dict(torch.load(opt.model_path), strict=False)
+    model.load_state_dict(torch.load(opt.eval_model_path), strict=False)
     model.to(device)
 
     learning_rate = opt.learning_rate
     sequence_length = opt.sequence_length
     train_feature_path = opt.train_feature_path
     val_feature_path = opt.val_feature_path
-    model_path = opt.model_path
+    model_path = opt.eval_model_path
     epochs = opt.epoch
 
     dict_train_start_idx_LFB = get_dict_start_idx_LFB(sequence_length, train_dataset)

@@ -11,7 +11,6 @@ import os
 import matplotlib.pyplot as plt
 
 # 设置每个阶段的颜色（这里只有7个，后续增加阶段数可能需要修改）
-# 搞个自动根据阶段数，生成好看的颜色的方法
 colors = ["#a40026", "#e75739", "#fcbd70", "#fdfdbf", "#badfec", "#6399c5", "#313594"]
 
 def visualize_predictions_and_ground_truth(preds_phase, labels_phase, acc, video_name, model_name, save_dir='./result/visualization/'):

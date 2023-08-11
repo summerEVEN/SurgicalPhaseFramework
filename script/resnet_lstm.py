@@ -146,7 +146,7 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
     使用 resnet_lstm 网络提取视频特征
     """
 
-    model.load_state_dict(torch.load(opt.model_path), strict=False)
+    model.load_state_dict(torch.load(opt.eval_model_path), strict=False)
     model.to(device)
     model.eval()
 

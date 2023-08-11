@@ -198,7 +198,7 @@ def hierarch_test(opt, model, test_loader, device, random_mask=False):
                 print("{} acc: {}".format(kc, vc/vall))
             return correct / total, all_preds, probabilty_list, video_name_list
         
-# 原来的预测和可视化函数（注释掉啦，看不懂，换成自己写的啦）
+# 原来的预测和可视化函数（注释掉啦，看不懂，重写了一个）
 """
 def base_predict(model, opt, device,test_loader, pki = False,split='test'):
 
@@ -373,9 +373,10 @@ def evaluate_and_visualize(opt, model, test_loader, device):
             
             labels = [label.item() for label in labels]
             
-            pic_file = video_name[0].split('.')[0] + '-vis.png'
+            # pic_file = video_name[0].split('.')[0] + '-vis.png'
             # pic_path = os.path.join(pic_save_dir, pic_file)
             # segment_bars_with_confidence_score(pic_path, confidence_score=confidence, labels=[labels, predicted])
+            # 这里调用了重新写的可视化函数
             visualize_predictions_and_ground_truth(predicted, labels, video_correct_sum/video_label_sum, 
                                                    video_name, opt.model_name, save_dir='./result/visualization/')
 

@@ -12,12 +12,14 @@ mstcn_f_maps: 32
 mstcn_f_dim: 2048
 mstcn_stages: 2
 
+len_q: 30
+
 sequence_length: 30
 
-train_feature_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/feature/resnet_lstm/g_LFB_train_st.pkl
-val_feature_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/feature/resnet_lstm/g_LFB_test_st.pkl
+train_feature_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/feature/resnet50/resnet50_train.pkl
+test_feature_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/feature/resnet50/resnet50_test.pkl
 
-tcn_model_path: 
+tcn_model_path: ./result/model/tcn/6-0.8793.model
 
 # 为了防止忘记这个网络的数据处理方法，在这里简单记录一下
 # 它是使用 transformer，同时利用了 时间 和 空间 信息

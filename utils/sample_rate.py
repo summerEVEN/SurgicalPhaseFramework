@@ -1,5 +1,6 @@
 """
-关于统一采样率的问题
+统一采样率
+(生成指定采样率的标签文本文件)
 """
 import os
 
@@ -8,7 +9,7 @@ def sample_txt(input_file, output_file, sample_rate):
         lines = infile.readlines()
 
     # 通过采样率从行列表中选择行
-    sampled_lines = lines[::sample_rate]
+    sampled_lines = lines[1::sample_rate]
 
     # 将筛选后的行写入新文件
     with open(output_file, 'w') as outfile:
