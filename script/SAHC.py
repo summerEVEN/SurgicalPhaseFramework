@@ -57,7 +57,7 @@ def hierarch_train(opt, model, train_loader, validation_loader, device, save_dir
         max_phase = 0
         for (video, labels, video_name) in (train_loader):
                 labels = torch.Tensor(labels).long()        
-                video, labels = video.to(device), labels.to(device) 
+                video, labels = video.float().to(device), labels.to(device) 
                 predicted_list, feature_list, prototype = model(video)
                
                 mean_len += predicted_list[0].size(-1)

@@ -21,10 +21,6 @@ from utils import *
 parser = argparse.ArgumentParser()
 parser.add_argument('--action', default='train', help='需要执行的操作: train, test, extract')
 parser.add_argument('--dataset', default="cholec80", help='选择的数据集')
-# parser.add_argument('--sample_rate', default=2, type=int, help='图片的采样率， fps原始为25')
-# parser.add_argument('--predictor_model', default='resnet_lstm', help='特征提取的模型')
-# parser.add_argument('--model_name', default='resnet_lstm', help='模型')
-# parser.add_argument('--model_path', default='', help='模型的路径，用来提取特征')
 parser.add_argument('--device', type=str, default="cuda")
 
 args, args2 = parser.parse_known_args()
@@ -59,7 +55,7 @@ def cuda_test():
         return device
     else:
         # device = torch.device("cpu")
-        print("GPU不可用，也不想使用CPU，先去干点别的事情吧")
+        print("GPU不可用")
         return False
 
 def run():
@@ -119,10 +115,6 @@ def run():
             从tcn的参数来看，out_features = 7 应该是和阶段的类别数相关
             
             """
-            # 加载 测试的数据集 和 训练的数据集
-            # train_path = os.path.join(os.getcwd(), "./result/resnet50", "train_dataset")
-            # test_path = os.path.join(os.getcwd(), "./result/resnet50", "test_dataset")
-
             video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path + '/train_dataset', 1, 'video_feature_resnet50')
             video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
             video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path + '/test_dataset', 1, 'video_feature_resnet50')
@@ -136,7 +128,7 @@ def run():
             # (opt, model, train_dataset, test_dataset, device, save_dir = "./result/model/resnet_lstm")
 
         if model_name == "TMR":
-            # 加载 测试的数据集 和 训练的数据集
+
             train_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "train_dataset")
             train_dataset = dataset.FramewiseDataset(args.dataset, train_path)
             test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
@@ -182,9 +174,9 @@ def run():
             num_layers_R = opt.num_layers_R
             num_R = opt.num_R
 
-            video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/train_dataset', sample_rate, 'video_feature')
+            video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/train_dataset', sample_rate, 'video_feature_resnet50')
             video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
-            video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/test_dataset', test_sample_rate, 'video_feature')
+            video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/test_dataset', test_sample_rate, 'video_feature_resnet50')
             video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
 
             base_model=Hierarch_TCN2(opt, num_layers_PG, num_layers_R, num_R, num_f_maps, dim, num_classes)
@@ -203,8 +195,6 @@ def run():
         （在线使用 predictor 模型把
         """
         if model_name == "tcn_video":
-
-            
             import model.predictor.tcn as tcn_model
             model = tcn_model.MultiStageModel(opt)
             from script.tcn import video_visualization
@@ -213,7 +203,6 @@ def run():
             video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
             video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path + '/test_dataset', 1, 'video_feature_resnet50')
             video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
-
 
             video_visualization(opt, model, video_test_dataloader, device)
 
@@ -253,15 +242,16 @@ def run():
             num_R = opt.num_R
 
             # 这个路径下是 从官方下载的数据集
-            # video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/train_dataset', sample_rate, 'video_feature')
-            # video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
-            # video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/test_dataset', test_sample_rate, 'video_feature')
-            # video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
+            video_traindataset_x = dataset.TestVideoDataset(opt.dataset, "../../Dataset/SAHC/cholec80" + '/train_dataset', sample_rate, 'video_feature')
+            video_train_dataloader_x = DataLoader(video_traindataset_x, batch_size=1, shuffle=False, drop_last=False)
+            video_testdataset_x = dataset.TestVideoDataset(opt.dataset, "../../Dataset/SAHC/cholec80"  + '/test_dataset', test_sample_rate, 'video_feature')
+            video_test_dataloader_x = DataLoader(video_testdataset_x, batch_size=1, shuffle=False, drop_last=False) 
 
             # 这个路径下是 自己参考论文复现的数据集
-            video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/train_dataset', sample_rate, 'video_feature')
+            # 这个resnet50的特征好像大小有点小了，不知道为什么报错了
+            video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/train_dataset', sample_rate, 'video_feature_resnet50')
             video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
-            video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/test_dataset', test_sample_rate, 'video_feature')
+            video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/test_dataset', test_sample_rate, 'video_feature_resnet50')
             video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
 
             base_model=Hierarch_TCN2(opt, num_layers_PG, num_layers_R, num_R, num_f_maps, dim, num_classes)
@@ -285,6 +275,16 @@ def run():
             model = TMR_model.resnet_lstm(opt)
             # TMR.evaluate_and_visualize(opt, model, test_dataset, device)
             TMR.evaluate_and_visualize(opt, model, train_dataset, device)
+
+        if model_name == "trans_svnet":
+            test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
+            test_dataset = dataset.FramewiseDataset(args.dataset, test_path)
+
+            import script.trans_svnet as trans_svnet
+            import model.refinement.trans_svnet as trans_svnet_model
+            model = trans_svnet_model.Transformer(opt)
+            # TMR.evaluate_and_visualize(opt, model, test_dataset, device)
+            trans_svnet.evaluate_and_visualize(opt, model, test_dataset, device)
 
     if args.action == 'extract':
         if model_name == "resnet50":
@@ -310,13 +310,6 @@ def run():
             model = resnet_lstm.resnet_lstm_feature(opt)
             resnet_lstm_model.extract(opt, model, train_dataset, test_dataset, device)
 
-        if model_name == "tcn":
-            # tcn 不需要预先提取特征
-            import model.predictor.tcn as tcn_model
-            import script.tcn as tcn_action
-            model = resnet_lstm_model.resnet_lstm(opt)
-            tcn_action.extract()
-
     if args.action == 'extract_video':
         """
         这个 extract_video 部分和前面的 extract 都是用来提取特征的
@@ -336,7 +329,12 @@ def run():
             import model.predictor.resnet50 as resnet50
             import script.resnet50 as resnet50_model
             model = resnet50.resnet_feature()
-            resnet50_model.extract_video(opt, model, train_dataset, test_dataset, device, save_dir = "../../Dataset/SAHC/even/")
+            resnet50_model.extract_video(opt, model, train_dataset, test_dataset, device, save_dir = "../../Dataset/SAHC/even2/")
+            """
+            这里生成的特征保存的路径:
+            train_feature: os.path.join(save_dir, "train_dataset", "video_feature_resnet50")
+            train_feature: os.path.join(save_dir, "test_dataset", "video_feature_resnet50")
+            """
             
 
         if model_name == "resnet_lstm":
@@ -349,6 +347,14 @@ def run():
             import script.resnet_lstm as resnet_lstm_model
             model = resnet_lstm.resnet_lstm_feature(opt)
             resnet_lstm_model.extract_video(opt, model, train_dataset, test_dataset, device, save_dir = "./result/feature_video/resnet_lstm")
+
+        if model_name == "tcn_video":
+            video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path + '/train_dataset', 1, 'video_feature_resnet50')
+            video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
+            video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path + '/test_dataset', 1, 'video_feature_resnet50')
+            video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
+
+            
 
 if __name__ == '__main__':  
     seed_everything()      

@@ -210,6 +210,14 @@ def extract_video(opt, model, train_dataset, test_dataset, device, save_dir = ".
 
     if  not os.path.exists(save_dir):
         os.makedirs(save_dir)
+
+    train_save_dir = os.path.join(save_dir, "train_dataset", "video_feature_resnet_lstm")
+    if  not os.path.exists(train_save_dir):
+        os.makedirs(train_save_dir)
+
+    test_save_dir = os.path.join(save_dir, "test_dataset", "video_feature_resnet_lstm")
+    if  not os.path.exists(test_save_dir):
+        os.makedirs(test_save_dir)
     
     train_loader = dataset_propre(opt, train_dataset)
     test_loader = dataset_propre(opt, test_dataset)
@@ -248,7 +256,7 @@ def extract_video(opt, model, train_dataset, test_dataset, device, save_dir = ".
 
                     
                     video_feature_x = video_feature_train[: train_clip_each_video[video_processed_num]]
-                    np.save(os.path.join(save_dir, video_name + ".npy"), video_feature_x)
+                    np.save(os.path.join(train_save_dir, video_name + ".npy"), video_feature_x)
 
                     # print("video_feature_x: ", video_feature_x.shape)
 
@@ -285,7 +293,7 @@ def extract_video(opt, model, train_dataset, test_dataset, device, save_dir = ".
                     video_name = os.path.split(os.path.split(img_path)[0])[1]
 
                     video_feature_x = video_feature_test[: test_clip_each_video[video_processed_num]]
-                    np.save(os.path.join(save_dir, video_name + ".npy"), video_feature_x)
+                    np.save(os.path.join(test_save_dir, video_name + ".npy"), video_feature_x)
 
                     video_feature_test = video_feature_test[test_clip_each_video[video_processed_num] :]
                     video_processed_num = video_processed_num + 1
