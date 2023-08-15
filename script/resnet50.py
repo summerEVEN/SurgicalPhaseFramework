@@ -8,6 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import Sampler
 from script.data_propre import dataset_propre
 from utils.tensorboard_log import writer_log
+from utils.ribbon import visualize_predictions_and_ground_truth
 
 import copy
 import time
@@ -150,7 +151,6 @@ def extract(opt, model, train_dataset, test_dataset, device, save_dir = "./resul
     # Long Term Feature bank
     g_LFB_train = np.zeros(shape=(0, 2048))
     g_LFB_val = np.zeros(shape=(0, 2048))
-
 
     with torch.no_grad():
         with tqdm(total=len(train_dataset), desc="extract train", unit="batch") as progress_bar:
@@ -312,6 +312,10 @@ def extract_video(opt, model, train_dataset, test_dataset, device, save_dir = ".
                     # print("第{}个视频特征处理完成，采样率为：{}".format(video_processed_num, opt.sample_rate))
                 progress_bar.update(len(outputs_phase.data))
             print("test part success!!")
+
+
+def evaluate_and_visualize(opt, model, test_dataset, device):
+    print("TODO")    
 
 
 if __name__ == "__main__":

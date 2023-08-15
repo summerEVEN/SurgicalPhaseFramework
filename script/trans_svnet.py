@@ -281,7 +281,6 @@ def evaluate_and_visualize(opt, model, test_dataset, device):
     print('test : Acc {}'.format(acc))
 
     return acc
-    print("success!!!")
 
 
 
