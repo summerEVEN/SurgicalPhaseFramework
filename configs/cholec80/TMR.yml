@@ -10,4 +10,4 @@ LFB_length: 30
 
 train_feature_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/feature/resnet_lstm/g_LFB_train_st.pkl
 val_feature_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/feature/resnet_lstm/g_LFB_test_st.pkl
-eval_model_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/model/TMR/1-0.4193.model
+eval_model_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/model/TMR/0-0.8038.model

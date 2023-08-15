@@ -273,8 +273,8 @@ def run():
             import script.TMR as TMR
             import model.refinement.TMR as TMR_model
             model = TMR_model.resnet_lstm(opt)
-            # TMR.evaluate_and_visualize(opt, model, test_dataset, device)
-            TMR.evaluate_and_visualize(opt, model, train_dataset, device)
+            TMR.evaluate_and_visualize(opt, model, test_dataset, device)
+            # TMR.evaluate_and_visualize(opt, model, train_dataset, device)
 
         if model_name == "trans_svnet":
             test_path = os.path.join(os.getcwd(), "../../Dataset/{}".format(args.dataset), "test_dataset")
