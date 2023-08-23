@@ -1,7 +1,7 @@
 model_name: resnet50
 learning_rate: 0.0001
 batch_size: 80
-epoch: 3
+epoch: 10
 sequence_length: 10
 workers: 4
 eval_model_path: ./result/model/resnet50/2-0.8079.model

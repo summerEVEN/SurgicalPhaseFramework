@@ -17,3 +17,5 @@
 *.py[cod]
 
 .vscode
+
+*test*

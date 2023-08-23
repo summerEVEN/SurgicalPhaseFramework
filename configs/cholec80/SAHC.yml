@@ -1,11 +1,12 @@
 model_name: SAHC
-eval_model_path: ./result/model/cholec80/Hierarch_TCN2/hierTrue_mslossTrue_transTrue/best_58.model
+eval_model_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/model/cholec80/Hierarch_TCN2/hierTrue_mslossTrue_transTrue/best_69_0.8928.model
 
 # 这个配置文件里面的参数，目前只是照搬了 https://github.com/xmed-lab/SAHC 里面的参数，还没有完全理解里面
 dataset: cholec80
 dataset_path: ../../Dataset/SAHC/even
-sample_rate: 25
-test_sample_rate: 25
+# dataset_path: ../../Dataset/SAHC/cholec80
+sample_rate: 1
+test_sample_rate: 1
 refine_model: gru
 num_classes: 7
 model: Hierarch_TCN2

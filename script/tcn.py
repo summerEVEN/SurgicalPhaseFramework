@@ -380,8 +380,34 @@ def video_visualization(opt, model, test_loader, device):
     return epoch_acc
 
 
-def extract():
+def extract_video(opt, model, train_loader, test_loader, device):
     """
-    这个好像不需要提前提取特征，这个函数用不到
+    提取特征
     """
-    print("tcn不需要提前提取特征")
+    print("TODO")
+    return 0
+    model.load_state_dict(torch.load(opt.eval_model_path), strict=False)
+    model.to(device)
+    model.eval()
+    total = 0
+    test_corrects_phase = 0
+
+    for (video, labels, video_name) in tqdm(test_loader):
+        labels = torch.Tensor(labels).long()        
+        video, labels = video.float().to(device), labels.to(device) 
+
+        video_fe = video.transpose(2, 1)
+        outputs_phase = model.forward(video_fe)
+        stages = outputs_phase.shape[0]
+
+        video_feature, preds_phase = torch.max(outputs_phase[stages-1].squeeze().transpose(1, 0).data, 1)
+
+        # np.save(os.path.join(test_save_dir, video_name + ".npy"), video_feature_x)
+
+        batch_corrects_phase = torch.sum(preds_phase == labels.data)
+        test_corrects_phase += batch_corrects_phase
+        total += len(labels.data)
+
+    epoch_acc = test_corrects_phase / total
+    print('test Acc {}'.format(epoch_acc))
+    return epoch_acc

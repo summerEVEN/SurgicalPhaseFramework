@@ -175,13 +175,17 @@ def run():
             num_R = opt.num_R
 
             video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/train_dataset', sample_rate, 'video_feature_resnet50')
-            video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
             video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/test_dataset', test_sample_rate, 'video_feature_resnet50')
+
+            # video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/train_dataset', sample_rate, 'video_feature')
+            # video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/test_dataset', test_sample_rate, 'video_feature')
+
+            video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
             video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
 
             base_model=Hierarch_TCN2(opt, num_layers_PG, num_layers_R, num_R, num_f_maps, dim, num_classes)
             # base_model=Hierarch_TCN2(opt)
-            model_save_dir = 'result/model/{}/'.format(args.dataset)
+            model_save_dir = 'result/model_test/{}/'.format(args.dataset)
             print("device", device)
             hierarch_train(opt, base_model, video_train_dataloader, video_test_dataloader, device, save_dir=model_save_dir, debug=True)
 
@@ -243,24 +247,24 @@ def run():
 
             # 这个路径下是 从官方下载的数据集
             video_traindataset_x = dataset.TestVideoDataset(opt.dataset, "../../Dataset/SAHC/cholec80" + '/train_dataset', sample_rate, 'video_feature')
-            video_train_dataloader_x = DataLoader(video_traindataset_x, batch_size=1, shuffle=False, drop_last=False)
+            video_train_dataloader = DataLoader(video_traindataset_x, batch_size=1, shuffle=False, drop_last=False)
             video_testdataset_x = dataset.TestVideoDataset(opt.dataset, "../../Dataset/SAHC/cholec80"  + '/test_dataset', test_sample_rate, 'video_feature')
-            video_test_dataloader_x = DataLoader(video_testdataset_x, batch_size=1, shuffle=False, drop_last=False) 
+            video_test_dataloader = DataLoader(video_testdataset_x, batch_size=1, shuffle=False, drop_last=False) 
 
             # 这个路径下是 自己参考论文复现的数据集
             # 这个resnet50的特征好像大小有点小了，不知道为什么报错了
-            video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/train_dataset', sample_rate, 'video_feature_resnet50')
-            video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
-            video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/test_dataset', test_sample_rate, 'video_feature_resnet50')
-            video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
+            # video_traindataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/train_dataset', sample_rate, 'video_feature_resnet50')
+            # video_train_dataloader = DataLoader(video_traindataset, batch_size=1, shuffle=False, drop_last=False)
+            # video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path.format(opt.dataset) + '/test_dataset', test_sample_rate, 'video_feature_resnet50')
+            # video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
 
             base_model=Hierarch_TCN2(opt, num_layers_PG, num_layers_R, num_R, num_f_maps, dim, num_classes)
             # base_model=Hierarch_TCN2(opt)
             # model_save_dir = 'result/model/{}/'.format(args.dataset)
             print("device", device)
 
-            # evaluate_and_visualize(opt, base_model, video_test_dataloader, device)
-            evaluate_and_visualize(opt, base_model, video_train_dataloader, device)
+            evaluate_and_visualize(opt, base_model, video_test_dataloader, device)
+            # evaluate_and_visualize(opt, base_model, video_train_dataloader, device)
 
 
         if model_name == "TMR":
@@ -354,6 +358,11 @@ def run():
             video_testdataset = dataset.TestVideoDataset(opt.dataset, opt.dataset_path + '/test_dataset', 1, 'video_feature_resnet50')
             video_test_dataloader = DataLoader(video_testdataset, batch_size=1, shuffle=False, drop_last=False) 
 
+            import model.predictor.tcn as tcn_model
+            model = tcn_model.MultiStageModel(opt)
+            import script.tcn as tcn_action
+
+            tcn_action.extract_video(opt, model, video_train_dataloader, video_test_dataloader, device)
             
 
 if __name__ == '__main__':  

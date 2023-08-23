@@ -29,7 +29,7 @@ def visualize_predictions_and_ground_truth(preds_phase, labels_phase, acc, video
     # axs[1].figure(dpi=300,figsize=(30,3)) # 分辨率参数-dpi，画布大小参数-figsize
 
     axs[0].bar(range(len(preds_phase)), [1]*len(preds_phase), width=1.0, color=[colors[i] for i in preds_phase])
-    axs[0].set_title(model_name + " " + str(round(acc, 4))) 
+    axs[0].set_title(model_name + "-" + str(video_name) + "-" + str(round(acc, 4))) 
     axs[0].axis('off')  # 关闭轴
     axs[1].bar(range(len(labels_phase)), [1]*len(labels_phase), width=1.0, color=[colors[i] for i in labels_phase])
     axs[1].set_title('ground_turth') 

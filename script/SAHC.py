@@ -110,7 +110,7 @@ def hierarch_train(opt, model, train_loader, validation_loader, device, save_dir
                 best_epoch = epoch
                 if not os.path.exists(save_dir):
                     os.makedirs(save_dir)
-                torch.save(model.state_dict(), save_dir + '/best_{}.model'.format(epoch))
+                torch.save(model.state_dict(), save_dir + '/best_{}_{}.model'.format(epoch, round(best_acc, 4)))
         print('Best Test: Acc {}, Epoch {}'.format(best_acc, best_epoch))
 
 def hierarch_test(opt, model, test_loader, device, random_mask=False):
@@ -145,7 +145,7 @@ def hierarch_test(opt, model, test_loader, device, random_mask=False):
                 labels = torch.Tensor(labels).long()
               
                     
-                video, labels = video.to(device), labels.to(device)
+                video, labels = video.float().to(device), labels.to(device)
                 max_seq = max(max_seq, video.size(1))
                
                 predicted_list, feature_list, _ = model(video)

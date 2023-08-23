@@ -103,7 +103,7 @@ def train(opt, model, train_dataset, test_dataset, device, save_dir = "./result/
 
                 long_feature = get_long_feature(start_index=video_phase_count,
                                         lfb=g_LFB_train, LFB_length=video_num - opt.sequence_length)
-                long_feature = (torch.Tensor(long_feature)).to(device)
+                long_feature = (torch.Tensor(np.array(long_feature))).to(device)
                 video_fe = long_feature.transpose(2, 1)
 
                 out_features = tcn_model.forward(video_fe)[-1]
@@ -250,7 +250,7 @@ def evaluate_and_visualize(opt, model, test_dataset, device):
 
             long_feature = get_long_feature(start_index=video_phase_count,
                                     lfb=g_LFB_test, LFB_length=video_num - opt.sequence_length)
-            long_feature = (torch.Tensor(long_feature)).to(device)
+            long_feature = (torch.Tensor(np.array(long_feature))).to(device)
             video_fe = long_feature.transpose(2, 1)
 
             out_features = tcn_model.forward(video_fe)[-1]
@@ -269,6 +269,8 @@ def evaluate_and_visualize(opt, model, test_dataset, device):
 
             img_path = test_dataset[video_phase_count][3]
             video_name = os.path.split(os.path.split(img_path)[0])[1]
+
+            # print(video_name, " ", int(batch_corrects_phase.data)/len(labels_phase.data))
 
             visualize_predictions_and_ground_truth(preds_phase, labels_phase, int(batch_corrects_phase.data)/len(labels_phase.data), 
                                                    video_name, opt.model_name, save_dir='./result/visualization/')
