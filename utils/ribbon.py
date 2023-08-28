@@ -48,6 +48,6 @@ def visualize_predictions_and_ground_truth(preds_phase, labels_phase, acc, video
     # 保存结果图
     save_path = os.path.join(save_dir, model_name, '{}.png'.format(video_name))
     plt.savefig(save_path)
-    plt.show()
+    plt.close()
 
 

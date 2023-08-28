@@ -351,7 +351,7 @@ def evaluate_and_visualize(opt, model, test_loader, device):
         for (video, labels, video_name) in (test_loader):
             labels = torch.Tensor(labels).long()
             print("video.size(),video_name,labels.size(): ", video.size(),video_name,labels.size())
-            video = video.to(device)
+            video = video.float().to(device)
             labels = labels.to(device)
             predicted_list, feature_list, _ = model(video)
                 
@@ -378,7 +378,7 @@ def evaluate_and_visualize(opt, model, test_loader, device):
             # segment_bars_with_confidence_score(pic_path, confidence_score=confidence, labels=[labels, predicted])
             # 这里调用了重新写的可视化函数
             visualize_predictions_and_ground_truth(predicted, labels, video_correct_sum/video_label_sum, 
-                                                   video_name, opt.model_name, save_dir='./result/visualization/')
+                                                   video_name, opt.model_name, save_dir='./result/visualization_SAHC/')
 
             # predicted_phases_expand = []
            

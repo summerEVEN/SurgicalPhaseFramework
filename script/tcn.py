@@ -226,6 +226,7 @@ def train_video(opt, model, train_loader, test_loader, device, save_dir = "./res
         running_loss_phase = 0.0
 
         for (video, labels, video_name) in tqdm(train_loader):
+            torch.cuda.empty_cache()
             labels = torch.Tensor(labels).long()        
             video, labels = video.float().to(device), labels.to(device) 
 
@@ -280,6 +281,7 @@ def test_video(opt, model, test_loader, device):
     test_corrects_phase = 0
 
     for (video, labels, video_name) in tqdm(test_loader):
+        torch.cuda.empty_cache()
         labels = torch.Tensor(labels).long()        
         video, labels = video.float().to(device), labels.to(device) 
 
@@ -359,6 +361,7 @@ def video_visualization(opt, model, test_loader, device):
     test_corrects_phase = 0
 
     for (video, labels, video_name) in tqdm(test_loader):
+        torch.cuda.empty_cache()
         labels = torch.Tensor(labels).long()        
         video, labels = video.float().to(device), labels.to(device) 
 
@@ -380,34 +383,44 @@ def video_visualization(opt, model, test_loader, device):
     return epoch_acc
 
 
-def extract_video(opt, model, train_loader, test_loader, device):
+def extract_video(opt, model, train_loader, test_loader, device, save_dir = "./result/feature_video"):
     """
     提取特征
     """
-    print("TODO")
-    return 0
+    # print("TODO")
     model.load_state_dict(torch.load(opt.eval_model_path), strict=False)
     model.to(device)
     model.eval()
-    total = 0
-    test_corrects_phase = 0
 
-    for (video, labels, video_name) in tqdm(test_loader):
-        labels = torch.Tensor(labels).long()        
-        video, labels = video.float().to(device), labels.to(device) 
+    train_save_dir = os.path.join(save_dir, "train_dataset", "video_feature_tcn")
+    if  not os.path.exists(train_save_dir):
+        os.makedirs(train_save_dir)
 
-        video_fe = video.transpose(2, 1)
-        outputs_phase = model.forward(video_fe)
-        stages = outputs_phase.shape[0]
+    test_save_dir = os.path.join(save_dir, "test_dataset", "video_feature_tcn")
+    if  not os.path.exists(test_save_dir):
+        os.makedirs(test_save_dir)
 
-        video_feature, preds_phase = torch.max(outputs_phase[stages-1].squeeze().transpose(1, 0).data, 1)
+    print("train_save_dir: ", train_save_dir)
+    print("test_save_dir: ", test_save_dir)
 
-        # np.save(os.path.join(test_save_dir, video_name + ".npy"), video_feature_x)
+    with torch.no_grad():
+        for (video, labels, video_name) in tqdm(train_loader):
+            labels = torch.Tensor(labels).long()        
+            video, labels = video.float().to(device), labels.to(device) 
 
-        batch_corrects_phase = torch.sum(preds_phase == labels.data)
-        test_corrects_phase += batch_corrects_phase
-        total += len(labels.data)
+            video_fe = video.transpose(2, 1)
+            video_feature_x = model.forward(video_fe)
 
-    epoch_acc = test_corrects_phase / total
-    print('test Acc {}'.format(epoch_acc))
-    return epoch_acc
+            video_feature_x = video_feature_x.squeeze().transpose(1, 0).cpu()
+            np.save(os.path.join(train_save_dir, str(video_name[0])[0:7]), video_feature_x)
+
+
+        for (video, labels, video_name) in tqdm(test_loader):
+            labels = torch.Tensor(labels).long()        
+            video, labels = video.float().to(device), labels.to(device) 
+
+            video_fe = video.transpose(2, 1)
+            video_feature_x = model.forward(video_fe)
+            video_feature_x = video_feature_x.squeeze().transpose(1, 0).cpu()
+            np.save(os.path.join(test_save_dir, str(video_name[0])[0:7]), video_feature_x)
+    print("success!")

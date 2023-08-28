@@ -127,6 +127,7 @@ class DilatedResidualLayer(nn.Module):
         return (x + out)
 
 
+# 下面的是提取特征的网络结构
 class SingleStageModel1(nn.Module):
     def __init__(self,
                  num_layers,
@@ -155,13 +156,14 @@ class SingleStageModel1(nn.Module):
         return out_classes, out
 
 class MultiStageModel1(nn.Module):
-    def __init__(self, mstcn_stages, mstcn_layers, mstcn_f_maps, mstcn_f_dim, out_features, mstcn_causal_conv):
-        self.num_stages = mstcn_stages  # 4 #2
-        self.num_layers = mstcn_layers  # 10  #5
-        self.num_f_maps = mstcn_f_maps  # 64 #64
-        self.dim = mstcn_f_dim  #2048 # 2048
-        self.num_classes = out_features  # 7
-        self.causal_conv = mstcn_causal_conv
+    # def __init__(self, mstcn_stages, mstcn_layers, mstcn_f_maps, mstcn_f_dim, out_features, mstcn_causal_conv):
+    def __init__(self, opt):
+        self.num_stages = opt.mstcn_stages  # 4 #2
+        self.num_layers = opt.mstcn_layers  # 10  #5
+        self.num_f_maps = opt.mstcn_f_maps  # 64 #64
+        self.dim = opt.mstcn_f_dim  #2048 # 2048
+        self.num_classes = opt.out_features  # 7
+        self.causal_conv = opt.mstcn_causal_conv
         print(
             f"num_stages_classification: {self.num_stages}, num_layers: {self.num_layers}, num_f_maps:"
             f" {self.num_f_maps}, dim: {self.dim}")

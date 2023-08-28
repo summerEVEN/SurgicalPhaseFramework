@@ -1,5 +1,5 @@
 model_name: SAHC
-eval_model_path: /home/ubuntu/disk1/Even/even/SurgicalPhaseFramework/result/model/cholec80/Hierarch_TCN2/hierTrue_mslossTrue_transTrue/best_69_0.8928.model
+eval_model_path: ./result/model_test/cholec80/Hierarch_TCN2/hierTrue_mslossTrue_transTrue/best_25_0.9181.model
 
 # 这个配置文件里面的参数，目前只是照搬了 https://github.com/xmed-lab/SAHC 里面的参数，还没有完全理解里面
 dataset: cholec80
